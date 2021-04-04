@@ -53,9 +53,17 @@ class xbeeDataThread(QThread):
             newData = self.xbee.readLine()
             newData = str(newData, 'utf-8')
             self.line += newData
+        
         if(self.line != ""):
+            self.line = self.line.strip()
+            if(self.line.split(',')[0] == "2617"):
             #parse through and update variable arrays 
-            self.parseContainerData(self.line)
+                self.parseContainerData(self.line)
+                print("we got container data")
+            elif(self.line == "PING_RECIEVED"):
+                print("WE GOT PING_RECIEVED")
+            else:
+                print("not container data or ping received")
         self.line = ""
 
     def parseContainerData(self, line):
@@ -69,8 +77,8 @@ class xbeeDataThread(QThread):
         graphsX.append(self.packetCount)
         containerAltY.append(float(line[7]))
         containerBattY = line[9]
-        print(containerBattY)
-        print(line)
+        #print(containerBattY)
+        #print(line)
 
     def run(self):
         self.dataCollectionTimer.start(50)
@@ -191,13 +199,14 @@ class Display(QWidget):
         commandBox = QComboBox(self)
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
-        commandBox.addItems(["CX_ON", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE"])
+        commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
         line_edit.setReadOnly(True) 
         commandBoxesLayout.addWidget(commandBox)
         sendButt = QPushButton('Send Command')
+        sendButt.clicked.connect(self.sendCommand)
         sendButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
         commandBoxesLayout.addWidget(sendButt)
         commandBoxes.setLayout(commandBoxesLayout)
@@ -276,7 +285,15 @@ class Display(QWidget):
     #updates all of the graphs with data coming from xbee
     def updateAllGraphs(self):
         self.altitudePlot.setData(graphsX, containerAltY)
-        self.battBox.children()[0].itemAt(1).widget().setText(containerBattY)
+        self.battBox.children()[0].itemAt(1).widget().setText(containerBattY) #path to the battery voltage box
+
+    def sendCommand(self):
+        #print(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText()) #path to the command selected
+        if(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_PING"):
+            #print('Yass')
+            dat = "<CMD,2617,CX,PING>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+
 
 #thread to update the graphs
 class updateGraphs(QThread):
