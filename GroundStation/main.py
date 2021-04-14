@@ -55,6 +55,7 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
+            print(self.line)
             self.line = self.line.strip()
             if(self.line.split(',')[0] == "2617"):
             #parse through and update variable arrays 
@@ -128,7 +129,7 @@ class Display(QWidget):
     def createAltGraph(self):
         self.altitudeGraph = pg.PlotWidget()
         self.altitudeGraph.clear()
-        self.altitudeGraph.setRange(yRange=[0, 150])
+        self.altitudeGraph.setRange(yRange=[0, 200])
         self.altitudeGraph.setTitle('Altitude', **{'color': '#FFF', 'size': '14pt'})
         self.altitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
         pen = pg.mkPen(color=containerColor)
@@ -290,7 +291,7 @@ class Display(QWidget):
     def sendCommand(self):
         #print(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText()) #path to the command selected
         if(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_PING"):
-            #print('Yass')
+            print('About to send ping command')
             dat = "<CMD,2617,CX,PING>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
