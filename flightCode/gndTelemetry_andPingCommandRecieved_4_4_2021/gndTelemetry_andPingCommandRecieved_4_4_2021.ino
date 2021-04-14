@@ -50,6 +50,7 @@ float pres;
 float analogReading;
 float analogVoltage;
 int incomingByte = 0;
+#define Po 10.1325
 
 //DEFINE RECEIVING DATA VARS
 const byte numChars = 32;
@@ -62,17 +63,17 @@ void setup() {
   digitalWrite(ledPin, HIGH);
 
   //INITIALIZE SERIALS
-  Serial1.begin(115200); //openlog
+  Serial1.begin(9600); //openlog
   while (!Serial1)
   {
-    Serial1.println("open log aint starting");
+   Serial1.println("open log aint starting");
   };
-  pinPeripheral(PIN_SERIAL_RX, PIO_SERCOM);
-  pinPeripheral(PIN_SERIAL_TX, PIO_SERCOM);
-  Serial1.begin(9600); 
-  while (!Serial1)
+  //pinPeripheral(PIN_SERIAL_RX2, PIO_SERCOM);
+  //pinPeripheral(PIN_SERIAL_TX2, PIO_SERCOM);
+  Serial2.begin(9600); 
+  while (!Serial2)
   {
-    Serial1.print("xbee aint starting");
+    Serial2.print("xbee aint starting");
   };
 
   //INITIALIZE BMP
@@ -118,7 +119,7 @@ void loop() {
   
   //INTERVAL TO GET SENSOR DATA
   if((currentTs - sensorDelayStart) > sensorDelayNum){
-    if (! bmp.performReading()) {
+   if (! bmp.performReading()) {
       Serial1.println("Failed to perform reading :(");
       Serial1.println("Failed to perform reading :(");
       return;
@@ -126,8 +127,10 @@ void loop() {
     
     //BMP DATA
     tem = bmp.temperature; //celcius
-    pres = bmp.pressure; //Pa
-    alt = bmp.readAltitude(SEALEVELPRESSURE_HPA) + altCorrection; //meters
+    pres = bmp.pressure / 100.0F; //Pa
+    alt = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255))) + altCorrection;
+    //alt = bmp.readAltitude(SEALEVELPRESSURE_HPA) + altCorrection; //meters
+    
     //GPS DATA
     gpsLat = myGPS.getLatitude();
     gpsLat = gpsLat / 10000000;
@@ -137,8 +140,9 @@ void loop() {
     analogReading = analogRead(BATTERYSENSORPIN);
     analogVoltage = (analogReading * 3.3) / 4095;
     voltage = analogVoltage * ((33000 + 10000) / 10000);
-
+    
     sensorDelayStart = millis();
+
   }
   
   //INTERVAL TO PRINT TO SERIAL DEVICES
@@ -152,6 +156,7 @@ void loop() {
      recvWithStartEndMarkers();
      showNewData();
      readDelayStart = millis();
+
    }
 }
 
@@ -167,7 +172,7 @@ void writeOpenLogXbees(int teamId, String missionTime, int packetCount, String p
   int runSeconds=secsRemaining%60;
   
   missionTime = String(runHours) + ":" + String(runMinutes) + ":" + String(runSeconds);
-  
+
   printToSerials(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(altitude) + "," + String(temperature) +
                   "," + String(voltage) + "," + gpsTime + "," + String(lat) + "," + String(lng) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
                   String(sp2PacketCount) + "," + lastCommand);
@@ -176,8 +181,8 @@ void writeOpenLogXbees(int teamId, String missionTime, int packetCount, String p
 }
 
 void printToSerials(String msg){
-  Serial1.print(msg);
-  Serial1.print(msg);
+  Serial2.println(msg);
+  Serial1.println(msg);
 }
 
 void recvWithStartEndMarkers() {
@@ -187,8 +192,8 @@ void recvWithStartEndMarkers() {
     char endMarker = '>';
     char rc;
  
-    while (Serial1.available() > 0 && newData == false) {
-        rc = Serial1.read();
+    while (Serial2.available() > 0 && newData == false) {
+        rc = Serial2.read();
 
         if (recvInProgress == true) {
             if (rc != endMarker) {
@@ -217,7 +222,7 @@ void showNewData() {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars;
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial1.println("PING_RECIEVED");
+          Serial2.println("PING_RECIEVED");
         }
         newData = false;
     }

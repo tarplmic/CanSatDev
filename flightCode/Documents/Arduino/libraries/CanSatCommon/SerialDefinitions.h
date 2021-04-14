@@ -14,8 +14,8 @@
 
 //Serial1 already defined in arduino 
 
-Uart Serial2 (&sercom4, PIN_SERIAL_RX2, PIN_SERIAL_TX2, PAD_SERIAL_RX2, PAD_SERIAL_TX2 );
-void SERCOM4_Handler()
+Uart Serial2 (&sercom2, PIN_SERIAL_RX2, PIN_SERIAL_TX2, PAD_SERIAL_RX2, PAD_SERIAL_TX2 );
+void SERCOM2_Handler()
 {
   Serial2.IrqHandler();
 }
