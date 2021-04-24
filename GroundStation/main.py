@@ -7,6 +7,7 @@ from PyQt5 import QtSerialPort
 import pyqtgraph as pg
 from random import uniform, randint
 import serial
+import csv
 
 #define global variables
 global containerColor
@@ -29,6 +30,12 @@ global containerAltY
 containerAltY = [0]
 global containerBattY
 containerBattY = "0.0"
+global latitude
+latitude = [34]
+global longitude 
+longitude = [-86]
+global utcTimeY
+utcTimeY = "00:00:00"
 
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
@@ -57,20 +64,30 @@ class xbeeDataThread(QThread):
         if(self.line != ""):
             print(self.line)
             self.line = self.line.strip()
-            if(self.line.split(',')[0] == "2617"):
-            #parse through and update variable arrays 
-                self.parseContainerData(self.line)
-                print("we got container data")
-            elif(self.line == "PING_RECIEVED"):
-                print("WE GOT PING_RECIEVED")
-            else:
-                print("not container data or ping received")
+            self.line = self.line.split(',')
+            if(len(self.line) >= 19):
+                if(self.line[3] == "C"):
+                #parse through and update variable arrays 
+                    self.parseContainerData(self.line)
+                #elif(self.line.split(',')[3] == "P"):
+                #elif(self.line == "PING_RECIEVED"):
+                #    print("WE GOT PING_RECIEVED")
+            # elif(self.line == "RELEASE CMD RECIEVED"):
+                #    print("VERIFIED RELEASE CMD RECEIVED")
+            for x in range(len(self.line)):
+                if(x == "PING_RECIEVED"):
+                    print("WE GOT PING RECIEVED")
+            #else:
+                #print("not container data or ping received")
+
         self.line = ""
 
     def parseContainerData(self, line):
-        global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
 
-        line = line.split(',')
+        global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
+        global utcTimeY
+
+        #line = line.split(',')
         self.packetCount += 1
         if self.packetCount > graphFrameLimit:
             graphsX.pop(0)
@@ -78,6 +95,14 @@ class xbeeDataThread(QThread):
         graphsX.append(self.packetCount)
         containerAltY.append(float(line[7]))
         containerBattY = line[9]
+        utcTimeY = line[10]
+        if(float(line[11]) != 0 and float(line[12])):
+            latitude.append(float(line[11]))
+            longitude.append(float(line[12]))
+
+        with open('Flight_2617_C.csv','a',newline='') as fd:
+            csvData = csv.writer(fd, delimiter=",")
+            csvData.writerow(line)
         #print(containerBattY)
         #print(line)
 
@@ -96,6 +121,7 @@ class Display(QWidget):
         self.setPalette(p)
         self.createGraphs()
         self.createAltGraph()
+        self.createGPSGraph()
         self.createRightButtons()
         self.createLegend()
         self.createBottomBoxes()
@@ -139,6 +165,17 @@ class Display(QWidget):
         self.altitudePlot = self.altitudeGraph.plot(graphsX, containerAltY, pen=pen, name='Container')
         app.processEvents()
 
+    def createGPSGraph(self):
+        self.gpsGraph = pg.PlotWidget()
+        self.gpsGraph.clear()
+        self.gpsGraph.setRange(yRange=[-85, -87])
+        self.gpsGraph.setLabels(left='Longitude (°)', bottom='Latitude (°)')
+        self.gpsGraph.setBackground(graphBackground)
+        pen = pg.mkPen(color=containerColor)
+        self.gpsGraph.getAxis('bottom').setPen('w')
+        self.gpsGraph.getAxis('left').setPen('w')
+        self.gpsGraphPlot = self.gpsGraph.plot(latitude, longitude, pen=pen, name='GPS', symbol='o')
+
     #creates the other (currently) non-real time graphs
     def createGraphs(self):
         self.rotationGraph = pg.PlotWidget()
@@ -156,17 +193,6 @@ class Display(QWidget):
         self.rotationGraph.getAxis('bottom').setPen('w')
         self.rotationGraph.getAxis('left').setPen('w')
         self.rotationGraph.plot(self.x, self.y, pen=pen)
-
-        self.gpsGraph = pg.PlotWidget()
-        self.gpsGraph.setTitle('GPS', **{'color': '#FFF', 'size': '14pt'})
-        self.gpsGraph.setLabels(left='Longitude (°)', bottom='Latitude (°)')
-        self.x = [uniform(34.79,34.80) for _ in range(25)]  # 100 time points
-        self.y = [uniform(-86.7,-86.0) for _ in range(25)]  # 100 data points
-        self.gpsGraph.setBackground(graphBackground)
-        pen = pg.mkPen(color=containerColor)
-        self.gpsGraph.getAxis('bottom').setPen('w')
-        self.gpsGraph.getAxis('left').setPen('w')
-        self.gpsGraph.plot(self.x, self.y, pen=pen, symbol='o')
 
         self.airTempGraph = pg.PlotWidget()
         self.airTempGraph.setRange(yRange=[26.3, 26.9])
@@ -200,7 +226,7 @@ class Display(QWidget):
         commandBox = QComboBox(self)
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
-        commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE"])
+        commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -287,14 +313,19 @@ class Display(QWidget):
     def updateAllGraphs(self):
         self.altitudePlot.setData(graphsX, containerAltY)
         self.battBox.children()[0].itemAt(1).widget().setText(containerBattY) #path to the battery voltage box
-
+        self.gpsGraphPlot.setData(latitude, longitude)
+        #print(self.utcBox.children()[0].itemAt(1).widget())
+        self.utcBox.children()[0].itemAt(1).widget().setText(utcTimeY)
     def sendCommand(self):
         #print(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText()) #path to the command selected
         if(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_PING"):
             print('About to send ping command')
             dat = "<CMD,2617,CX,PING>"
             self.dataCollectionThread.xbee.write(dat.encode())
-
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "MANUAL_RELEASE"):
+            print('About to send release command')
+            dat = "<CMD,2617,CX,RELEASE>"
+            self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs
 class updateGraphs(QThread):

@@ -5,38 +5,48 @@
 
 //INCLUDE ALL HEADER FILES NEEDED
 #include <init.h> //includes necessary libraries and initializes data vars
+#include "SAMDTimerInterrupt.h"
+#include "SAMD_ISR_Timer.h"
 #include <Sensors.h> //initialize and get data from sensors
 #include <SerialDefinitions.h> //initialize Serial2 and Serial3
 #include <TimeFunctions.h> //function to grab time (in terms of arduino millis)
+
+//#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+
 //DEFINE SENSORS
+//SFE_UBLOX_GNSS myGPS;
 Sensors sensors(6);
 TimeFunctions timeFunctions;
 
-//DEFINE DELAY VARS
-const int sensorDelayNum = 100;
-int sensorDelayStart;
-const int printDelayNum = 1000;
-int printDelayStart;
-const int readDelayNum = 10;
-int readDelayStart;
-const int altCheckDelayNum = 500;
-int altCheckDelayStart;
+SAMDTimer ITimer0(TIMER_TC3);
+SAMD_ISR_Timer ISR_Timer;
+
+#define HW_TIMER_INTERVAL_MS          50L
+
+#define TIMER_INTERVAL_getSensData             100L
+#define TIMER_INTERVAL_writeToXbee             1000L
+#define TIMER_INTERVAL_readXbee                400L
+#define TIMER_INTERVAL_altCheck                500L
 
 //container sensor vars, alt correction, and othe global vars are defined in init.h
 //DEFINE PAYLOAD SENSOR VARS FOR RELAY
-
+int sensorDivisor = 0;
+float tempSum = 0.0;
 //OTHER GLOBAL VARS TO DEFINE
 int incomingByte = 0;
+
+float deltaAlt[10];
+float previousAlt = 0;
+float currentAlt = 0; 
+int currentAltPos = 0;
 
 //DEFINE RECEIVING DATA VARS
 const byte numChars = 32;
 char receivedChars[numChars];
 boolean newData = false;
 
-float deltaAlt[10];
-float previousAlt = 0;
-float currentAlt = 0; 
-int currentAltPos = 0;
+const int gpsDelayNum = 2000;
+int gpsDelayStart;
 
 void setup() {
   pinMode(ledPin, OUTPUT);
@@ -47,68 +57,42 @@ void setup() {
   Serial1.println("begin test");
   Serial2.begin(9600); 
   while (!Serial2){ Serial1.print("xbee aint starting"); };
-  Serial1.println("past serial begin");
-  
+  Serial3.begin(9600);
+  while (!Serial3){Serial1.print("xbee not starting");}; 
+  Serial2.println("past serial begin");
+
   sensors.init();
-  Serial1.println("past sensor init");
   
-  sensorDelayStart = millis();
-  printDelayStart = millis();
+  Serial2.println("past sensor init");
+
+  if (ITimer0.attachInterruptInterval(HW_TIMER_INTERVAL_MS * 1000, TimerHandler)){
+    int lastMillis = millis();
+    Serial.println("Starting  ITimer OK, millis() = " + String(lastMillis));
+  }
+  else{
+    Serial.println("Can't set ITimer correctly. Select another freq. or interval");
+  }
+  //ISR_Timer.setInterval(TIMER_INTERVAL_getSensData, getSensData);
+  //ISR_Timer.setInterval(TIMER_INTERVAL_writeToXbee, printToXbee);
+  //ISR_Timer.setInterval(TIMER_INTERVAL_readXbee, readXbee);
+  //ISR_Timer.setInterval(TIMER_INTERVAL_readXbee, readPayloadXBee);
+  //ISR_Timer.setInterval(TIMER_INTERVAL_altCheck, altitudeCheck);
+
+  gpsDelayStart = millis();
   
 }
 
 void loop() {
   int currentTs = millis();
-  
-  //INTERVAL TO GET SENSOR DATA
-  if((currentTs - sensorDelayStart) > sensorDelayNum){
-    tem = sensors.getTemp();
-    pres = sensors.getPressure();
-    alt = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
+  if((currentTs - gpsDelayStart) > gpsDelayNum){
+    Serial2.println((currentTs - gpsDelayStart));
     gpsLat = sensors.getLat();
     gpsLong = sensors.getLong();
     gpsAlt = sensors.getGPSAlt();
-    gpsTime = sensors.getGPSTime();
-    gpsSats = sensors.getNumSats();
-    voltage = sensors.getBattVoltage();
-    sensorDelayStart = millis();
-
-    previousAlt = currentAlt;
-    currentAlt = alt;
-    deltaAlt[currentAltPos] = currentAlt - previousAlt;
-    if(currentAltPos == 9){
-      currentAltPos = 0;
-    }else{
-      currentAltPos++;
-    }
+    gpsDelayStart = millis();
+    
   }
   
-  //INTERVAL TO PRINT TO SERIAL DEVICES
-  if((currentTs - printDelayStart) > printDelayNum){
-    printToXbee();
-    printDelayStart = millis();
-  }
-
-  //INTERVAL TO READ FROM SERIAL DEVICES
-  if((currentTs - readDelayStart) > readDelayNum){
-     recvWithStartEndMarkers();
-     showNewData();
-     readDelayStart = millis();
-   }
-
-   if((currentTs - altCheckDelayStart) > altCheckDelayNum){
-     altitudeCheck();
-     altCheckDelayStart = millis();
-   }
-}
-
-void printToXbee(){
-  missionTime = timeFunctions.getTime();
-  
-  Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
-                  "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
-                  String(sp2PacketCount) + "," + lastCommand);
-  packetCount += 1;
 }
 
 void altitudeCheck(){ 
@@ -123,6 +107,51 @@ void altitudeCheck(){
   Serial2.println("alt");
   Serial2.println(alt);*/
   
+}
+
+void getSensData(){
+  tem = sensors.getTemp();
+  tempSum += tem;
+  pres = sensors.getPressure();
+  alt = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
+  
+  /*gpsLat = sensors.getLat();
+  gpsLong = sensors.getLong();*/
+  
+  voltage = sensors.getBattVoltage();
+  sensorDivisor += 1;
+
+  previousAlt = currentAlt;
+  currentAlt = alt;
+  deltaAlt[currentAltPos] = currentAlt - previousAlt;
+  if(currentAltPos == 9){
+    currentAltPos = 0;
+  }else{
+    currentAltPos++;
+  }
+  
+}
+void printToXbee(){
+  missionTime = timeFunctions.getTime();
+  //int ts = millis();
+ // Serial2.println(String(ts));
+  float temperature = tempSum / sensorDivisor;
+  tempSum = 0;
+  sensorDivisor = 0;
+  Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
+                  "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
+                  String(sp2PacketCount) + "," + lastCommand);
+  packetCount += 1;
+}
+
+void readXbee(){
+  recvWithStartEndMarkers();
+  showNewData();
+}
+
+void TimerHandler(void)
+{
+  ISR_Timer.run();
 }
 
 void recvWithStartEndMarkers() {
@@ -162,9 +191,9 @@ void showNewData() {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars;
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial2.println("PING_RECIEVED");
+          Serial2.println(",PING_RECIEVED,");
         }else if(stringVersionReceivedChars == "CMD,2617,CX,RELEASE"){
-          Serial2.println("RELEASE CMD RECIEVED");
+          Serial2.println(",RELEASE CMD RECIEVED,");
           //activate servos to release
           sensors.releaseServo1();
         }

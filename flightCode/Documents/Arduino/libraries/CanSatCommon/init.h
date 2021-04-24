@@ -4,7 +4,7 @@
 #include "wiring_private.h" // pinPeripheral() function
 #include "Adafruit_BMP3XX.h"
 #include <Adafruit_BNO055.h>
-#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
+//#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 //our own files (located in Documents/Arduino/libraries/CanSatCommon)
 
 //PIN DEFINITIONS
@@ -23,7 +23,7 @@ const String packetType = "C";
 String mode = "F"; //F or S
 String sp1Released = "N"; //N or R
 String sp2Released = "N"; //N or R
-float alt = 0;
+float alt;
 float tem = 0;
 float voltage = 0; 
 String gpsTime = "00:00:00";
@@ -43,3 +43,4 @@ int altCorrection = 0;
 float pres;
 float analogReading;
 float analogVoltage;
+float rotRate[3];
