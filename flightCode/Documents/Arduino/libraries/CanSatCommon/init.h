@@ -15,6 +15,8 @@
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define PI 3.1415926535897932384626433832795
 
+#define NUMSAMPLES 10
+
 //DEFINE CONTAINER SENSOR VARS
 const int teamId = 2617;
 String missionTime = "00:00:00"; //hh:mm:ss

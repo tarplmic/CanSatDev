@@ -1384,6 +1384,8 @@ float previousAlt = 0;
 float currentAlt = 0; 
 int currentAltPos = 0;
 
+int sampleIndex = 0;
+
 void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
@@ -1433,12 +1435,17 @@ void loop() {
     //pres = sensors.getPressure();
     pres = fakeData[x] / 100;
     x++;
-    alt = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
+   // alt = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
+    bmpSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     
     voltage = sensors.getBattVoltage();
     rotRate[0] = sensors.getRotRateX();
     rotRate[1] = sensors.getRotRateY();
     rotRate[2] = sensors.getRotRateZ();
+
+    if (sampleIndex == NUMSAMPLES){
+      sampleIndex = 0; 
+    }
     sensorDelayStart = millis();
 
     Serial1.println(String(millis()) + "," + String(rotRate[0]) + "," + String(rotRate[1]) + "," + String(rotRate[2]) + "," + String(alt) + "," + String(tem) +

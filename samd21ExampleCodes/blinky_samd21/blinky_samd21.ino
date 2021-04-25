@@ -9,7 +9,7 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(ledPin, HIGH);
-  delay(100);
+  delay(10);
   digitalWrite(ledPin, LOW);
-  delay(100);
+  delay(10);
 }
