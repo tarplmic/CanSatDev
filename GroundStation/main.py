@@ -226,7 +226,8 @@ class Display(QWidget):
         commandBox = QComboBox(self)
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
-        commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
+        #commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
+        commandBox.addItems(["CX_PING", "MANUAL_RELEASE", "CLEAR_FLASH"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -238,6 +239,11 @@ class Display(QWidget):
         commandBoxesLayout.addWidget(sendButt)
         commandBoxes.setLayout(commandBoxesLayout)
         commandLayout.addWidget(commandBoxes)
+
+
+        self.altCorrectInput = QLineEdit()
+        self.altCorrectInput.returnPressed.connect(self.altCorrectEntered)
+        commandLayout.addWidget(self.altCorrectInput)
         
         self.mqttButt = QPushButton("MQTT: Disabled")
         self.mqttButt.setFixedSize(100, 30)
@@ -249,6 +255,11 @@ class Display(QWidget):
         commandLayout.setAlignment(Qt.AlignCenter)
         self.commandWid.setLayout(commandLayout)
     
+    def altCorrectEntered(self):
+        dat = "<CMD,2617,CX,SETALTCORRECTION," + self.altCorrectInput.text() + ">"
+        print(dat)
+        self.dataCollectionThread.xbee.write(dat.encode())
+
     #does things when the mqtt button is clicked
     def mqttClicked(self):
         if self.mqttButt.isChecked():
@@ -325,6 +336,10 @@ class Display(QWidget):
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "MANUAL_RELEASE"):
             print('About to send release command')
             dat = "<CMD,2617,CX,RELEASE>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CLEAR_FLASH"):
+            print('About to send clear flash command')
+            dat = "<CMD,2617,CX,CLEARFLASH>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs

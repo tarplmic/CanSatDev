@@ -17,7 +17,7 @@ void Sensors::init()
     //pinMode(CAMERAPIN, OUTPUT);
     //digitalWrite(CAMERAPIN, LOW);
 
-    if (!bmp.begin()) {
+    if (!bmp.begin_I2C()) {
         while (1){
             digitalWrite(_pin, LOW);
         };

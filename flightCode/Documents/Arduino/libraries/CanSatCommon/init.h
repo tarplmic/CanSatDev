@@ -4,6 +4,7 @@
 #include "wiring_private.h" // pinPeripheral() function
 #include "Adafruit_BMP3XX.h"
 #include <Adafruit_BNO055.h>
+#include <FlashStorage.h>
 //#include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 //our own files (located in Documents/Arduino/libraries/CanSatCommon)
 
@@ -14,8 +15,6 @@
 //CONSTANT VALUE DEFINITIONS
 #define SEALEVELPRESSURE_HPA (1013.25)
 #define PI 3.1415926535897932384626433832795
-
-#define NUMSAMPLES 10
 
 //DEFINE CONTAINER SENSOR VARS
 const int teamId = 2617;
