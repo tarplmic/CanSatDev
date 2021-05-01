@@ -36,6 +36,8 @@ global longitude
 longitude = [-86]
 global utcTimeY
 utcTimeY = "00:00:00"
+global serialLine
+serialLine = ""
 
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
@@ -56,6 +58,8 @@ class xbeeDataThread(QThread):
         self.dataCollectionTimer.timeout.connect(self.getData)
 
     def getData(self):
+        global serialLine
+
         while(self.xbee.canReadLine()):
             newData = self.xbee.readLine()
             newData = str(newData, 'utf-8')
@@ -63,6 +67,7 @@ class xbeeDataThread(QThread):
         
         if(self.line != ""):
             print(self.line)
+            serialLine = self.line
             self.line = self.line.strip()
             self.line = self.line.split(',')
             if(len(self.line) >= 19):
@@ -126,6 +131,7 @@ class Display(QWidget):
         self.createLegend()
         self.createBottomBoxes()
         self.createTitle()
+        self.createSerialBox()
         self.changeGraphics()
 
         self.dataCollectionThread = xbeeDataThread()
@@ -149,6 +155,7 @@ class Display(QWidget):
         grid.addWidget(self.utcBox, 3, 0, Qt.AlignCenter)
         grid.addWidget(self.battBox, 3, 1, Qt.AlignCenter)
         grid.addWidget(self.mqttButt, 3, 2, Qt.AlignCenter)
+        grid.addWidget(self.serialBox, 4, 0, 1, 4, Qt.AlignCenter)
         self.setLayout(grid)
 
     #create the altitude real time graph
@@ -227,7 +234,7 @@ class Display(QWidget):
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
         #commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
-        commandBox.addItems(["CX_PING", "MANUAL_RELEASE", "CLEAR_FLASH"])
+        commandBox.addItems(["CX_ON", "CX_OFF", "CX_PING", "MANUAL_RELEASE", "CLEAR_FLASH"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -314,6 +321,23 @@ class Display(QWidget):
         battLayout.addWidget(battText)
         self.battBox.setLayout(battLayout)
 
+    def createSerialBox(self):
+        self.serialBox = QWidget()
+        serialBoxLayout = QVBoxLayout()
+        serialBoxLabel = QLabel("Serial Input:")
+        serialBoxLabel.setFont(QFont('Arial', 10))
+        serialBoxLabel.setAlignment(Qt.AlignCenter)
+        serialBoxLabel.setStyleSheet("color: white")
+        serialBoxLayout.addWidget(serialBoxLabel)
+        serialBoxText = QLineEdit()
+        serialBoxText.setAlignment(Qt.AlignCenter)
+        serialBoxText.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
+        serialBoxText.setFixedSize(600,35)
+        serialBoxLayout.addWidget(serialBoxText)
+        #serialBoxLayout.addStretch()
+        self.serialBox.setLayout(serialBoxLayout)
+
+
     #creates title for the app
     def createTitle(self):
         self.title = QLabel('Spinister : CanSat Ground Station 2021')
@@ -327,6 +351,9 @@ class Display(QWidget):
         self.gpsGraphPlot.setData(latitude, longitude)
         #print(self.utcBox.children()[0].itemAt(1).widget())
         self.utcBox.children()[0].itemAt(1).widget().setText(utcTimeY)
+        self.serialBox.children()[0].itemAt(1).widget().setText(serialLine)
+
+
     def sendCommand(self):
         #print(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText()) #path to the command selected
         if(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_PING"):
@@ -340,6 +367,14 @@ class Display(QWidget):
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CLEAR_FLASH"):
             print('About to send clear flash command')
             dat = "<CMD,2617,CX,CLEARFLASH>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_ON"):
+            print('About to send cxon')
+            dat = "<CMD,2617,CX,ON>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CX_OFF"):
+            print('About to send cxoff')
+            dat = "<CMD,2617,CX,OFF>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs

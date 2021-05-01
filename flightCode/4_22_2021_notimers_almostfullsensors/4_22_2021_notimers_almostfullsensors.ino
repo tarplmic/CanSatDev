@@ -1321,8 +1321,6 @@ float fakeData[1325] = {100833,
 100893
 };
 
-
-
 //INCLUDE ALL HEADER FILES NEEDED
 #include <init.h> //includes necessary libraries and initializes data vars
 #include <Sensors.h> //initialize and get data from sensors
@@ -1372,6 +1370,8 @@ const int DO_WRITE_TO_FLASH = 0;
 FlashStorage(flightStageFlash, int);
 FlashStorage(altCorrectionFlash, int);
 
+int doSendData = 1;
+
 void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
@@ -1381,6 +1381,7 @@ void setup() {
   Serial1.println("begin test");
   Serial2.begin(9600); 
   while (!Serial2){ Serial1.print("xbee aint starting"); };
+  Serial2.println("STARTING CONTAINER SOFTWARE");
   Serial1.println("past serial begin");
 
   if(DO_WRITE_TO_FLASH){
@@ -1420,15 +1421,14 @@ void loop() {
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
-    //pres = sensors.getPressure();
-    pres = fakeData[x] / 100;
+    pres = sensors.getPressure();
+    //pres = fakeData[x] / 100;
     x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
     rawRotRateX[sampleIndex] = sensors.getRotRateX();
     rawRotRateY[sampleIndex] = sensors.getRotRateY();
     rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
-
 
     //PERFORM AVERAGING
     float totalAltitudes = 0;
@@ -1502,12 +1502,14 @@ void loop() {
 }
 
 void printToXbee(){
-  missionTime = timeFunctions.getTime();
+  if(doSendData){
+    missionTime = timeFunctions.getTime();
   
- Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
+    Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
                   String(sp2PacketCount) + "," + lastCommand + "," + altCorrection);
-  packetCount += 1;
+    packetCount += 1;
+  }
 }
 
 void altitudeCheck(){ 
@@ -1601,11 +1603,11 @@ void showNewData() {
         stringVersionReceivedChars = receivedChars;
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
           Serial2.println("CMD_2617_CX_PING");
-          lastCommand = "CMD,2617,CX,PING";
+          lastCommand = "PING";
           
         }else if(stringVersionReceivedChars == "CMD,2617,CX,RELEASE"){
           Serial2.println("RELEASE_CMD_RECIEVED");
-          lastCommand = "CMD_2617_CX,RELEASE";
+          lastCommand = "RELEASE";
           
           //activate servos to release
           sensors.releaseServo1();
@@ -1618,7 +1620,7 @@ void showNewData() {
           altCorrection = sentAltCorrect.toInt();
 
           if(DO_WRITE_TO_FLASH){
-            lastCommand = "CMD,2617,CX,SETALTCORRECTION";
+            lastCommand = "SETALTCORRECTION";
             Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
             altCorrectionFlash.write(altCorrection);
           }
@@ -1628,18 +1630,29 @@ void showNewData() {
             altCorrection = 0;
             flightStage = 0;
             if(DO_WRITE_TO_FLASH){
-              lastCommand = "CMD,2617,CX,CLEARFLASH";
+              lastCommand = "CLEARFLASH";
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
               // clear values
               flightStageFlash.write(0);
               altCorrectionFlash.write(0);
             }
+              
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,ON"){
+              Serial2.println("recieved on command");
+              lastCommand = "CXON";
+              doSendData = 1;
+              
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,OFF"){
+          Serial2.println("recieved off command");
+          lastCommand = "CXOFF";
+          doSendData = 0;
         }
         
         newData = false;
     }
 }
 
+/*
 void writePayloadXBee(String packet){
 
   int packetLength = packet.length();
@@ -1686,9 +1699,9 @@ void readPayloadXBee(){
   
   if (Serial3.available() >= 16){
     //Serial2.println("serial 3 avail");
-    /*while(Serial3.available() > 0){
-      Serial2.println(String(Serial3.read()));
-    }*/
+    //while(Serial3.available() > 0){
+      //Serial2.println(String(Serial3.read()));
+    //}
     
     if(Serial3.read() == 0x7E){
       for (int i = 1; i<15; i++){
@@ -1696,9 +1709,9 @@ void readPayloadXBee(){
       }
       while(Serial3.available() > 0){
         char dataIn = Serial3.read();
-        /*if (dataIn == 0x7E){
-          break;
-        }*/
+        //if (dataIn == 0x7E){
+          //break;
+        //}
         //else {
           incomingData += dataIn; 
         //}
@@ -1710,3 +1723,4 @@ void readPayloadXBee(){
     Serial2.println(incomingData);
   }
 }
+*/
