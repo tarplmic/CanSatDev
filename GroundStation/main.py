@@ -24,8 +24,12 @@ entireBackground = QColor('black')
 global graphFrameLimit 
 graphFrameLimit = 20
 
-global graphsX
-graphsX = [0]
+global SP1GraphsX
+SP1GraphsX = [0]
+global SP1AltY
+SP1AltY = [0]
+global contGraphsX
+contGraphsX = [0]
 global containerAltY
 containerAltY = [0]
 global containerBattY
@@ -44,7 +48,8 @@ class xbeeDataThread(QThread):
     def __init__(self):
         super().__init__()
 
-        self.packetCount = 0
+        self.contPacketCount = 0
+        self.sp1PacketCount = 0
         self.xbee = QtSerialPort.QSerialPort()
         self.xbee.setPortName('COM3')
         self.xbee.setBaudRate(9600)
@@ -66,15 +71,18 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
-            print(self.line)
             serialLine = self.line
             self.line = self.line.strip()
             self.line = self.line.split(',')
-            if(len(self.line) >= 19):
+            if(len(self.line) >= 20):
                 if(self.line[3] == "C"):
                 #parse through and update variable arrays 
                     self.parseContainerData(self.line)
-                #elif(self.line.split(',')[3] == "P"):
+            elif(len(self.line) >= 7):    
+                if(self.line[3] == "SP1"):
+                    print("WE GOT PAYLOAD  1 DATA")
+                    print(self.line)
+                    self.parseSP1Data(self.line)
                 #elif(self.line == "PING_RECIEVED"):
                 #    print("WE GOT PING_RECIEVED")
             # elif(self.line == "RELEASE CMD RECIEVED"):
@@ -87,29 +95,41 @@ class xbeeDataThread(QThread):
 
         self.line = ""
 
-    def parseContainerData(self, line):
-
+    def parseSP1Data(self, line):
         global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
         global utcTimeY
 
         #line = line.split(',')
-        self.packetCount += 1
-        if self.packetCount > graphFrameLimit:
-            graphsX.pop(0)
+        self.sp1PacketCount += 1
+        if self.sp1PacketCount > graphFrameLimit:
+            SP1GraphsX.pop(0)
+            SP1AltY.pop(0)
+        SP1GraphsX.append(self.sp1PacketCount)
+        SP1AltY.append(float(line[4]))
+
+        with open('Flight_2617_SP1.csv','a',newline='') as fd:
+            csvData = csv.writer(fd, delimiter=",")
+            csvData.writerow(line)
+        #print(containerBattY)
+        #print(line)
+
+    def parseContainerData(self, line):
+        self.contPacketCount += 1
+        if self.contPacketCount > graphFrameLimit:
+            contGraphsX.pop(0)
             containerAltY.pop(0)
-        graphsX.append(self.packetCount)
+        contGraphsX.append(self.contPacketCount)
         containerAltY.append(float(line[7]))
         containerBattY = line[9]
         utcTimeY = line[10]
-        if(float(line[11]) != 0 and float(line[12])):
+        if(float(line[12]) >= -95 and float(line[12]) <= -70 and float(line[11]) >= 25 and float(line[11]) <= 40) :
             latitude.append(float(line[11]))
             longitude.append(float(line[12]))
 
         with open('Flight_2617_C.csv','a',newline='') as fd:
             csvData = csv.writer(fd, delimiter=",")
             csvData.writerow(line)
-        #print(containerBattY)
-        #print(line)
+        
 
     def run(self):
         self.dataCollectionTimer.start(50)
@@ -124,14 +144,16 @@ class Display(QWidget):
         p = self.palette()
         p.setColor(self.backgroundRole(), entireBackground)
         self.setPalette(p)
-        self.createGraphs()
-        self.createAltGraph()
+        #self.createSP1AirTempGraph()
+        self.createContAltGraph()
         self.createGPSGraph()
         self.createRightButtons()
         self.createLegend()
         self.createBottomBoxes()
         self.createTitle()
         self.createSerialBox()
+        self.createSP1RotationGraph()
+        self.createSP1AltGraph()
         self.changeGraphics()
 
         self.dataCollectionThread = xbeeDataThread()
@@ -147,10 +169,10 @@ class Display(QWidget):
         grid.setContentsMargins(40, 40, 40, 40)
         grid.addWidget(self.title, 0, 0, 1, 4, Qt.AlignCenter)
         grid.addWidget(self.altitudeGraph, 1, 0)  
-        grid.addWidget(self.rotationGraph, 1, 1)
+        grid.addWidget(self.SP1rotationGraph, 1, 1)
         grid.addWidget(self.legendWid, 1, 2, Qt.AlignCenter)
         grid.addWidget(self.gpsGraph, 2, 0)
-        grid.addWidget(self.airTempGraph, 2, 1)
+        grid.addWidget(self.SP1AltitudeGraph, 2, 1)
         grid.addWidget(self.commandWid, 2, 2)
         grid.addWidget(self.utcBox, 3, 0, Qt.AlignCenter)
         grid.addWidget(self.battBox, 3, 1, Qt.AlignCenter)
@@ -159,23 +181,37 @@ class Display(QWidget):
         self.setLayout(grid)
 
     #create the altitude real time graph
-    def createAltGraph(self):
+    def createContAltGraph(self):
         self.altitudeGraph = pg.PlotWidget()
         self.altitudeGraph.clear()
         self.altitudeGraph.setRange(yRange=[0, 200])
-        self.altitudeGraph.setTitle('Altitude', **{'color': '#FFF', 'size': '14pt'})
+        self.altitudeGraph.setTitle('Container Altitude', **{'color': '#FFF', 'size': '14pt'})
         self.altitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
         pen = pg.mkPen(color=containerColor)
         self.altitudeGraph.setBackground(graphBackground)
         self.altitudeGraph.getAxis('bottom').setPen('w')
         self.altitudeGraph.getAxis('left').setPen('w')
-        self.altitudePlot = self.altitudeGraph.plot(graphsX, containerAltY, pen=pen, name='Container')
+        self.contAltitudePlot = self.altitudeGraph.plot(contGraphsX, containerAltY, pen=pen, name='Container')
+        app.processEvents()
+    
+    def createSP1AltGraph(self):
+        self.SP1AltitudeGraph = pg.PlotWidget()
+        self.SP1AltitudeGraph.clear()
+        self.SP1AltitudeGraph.setRange(yRange=[0, 200])
+        self.SP1AltitudeGraph.setTitle('SP1 Altitude', **{'color': '#FFF', 'size': '14pt'})
+        self.SP1AltitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
+        pen = pg.mkPen(color=sp1Color)
+        self.SP1AltitudeGraph.setBackground(graphBackground)
+        self.SP1AltitudeGraph.getAxis('bottom').setPen('w')
+        self.SP1AltitudeGraph.getAxis('left').setPen('w')
+        self.SP1AltitudePlot = self.SP1AltitudeGraph.plot(SP1GraphsX, SP1AltY, pen=pen, name='SP1')
         app.processEvents()
 
     def createGPSGraph(self):
         self.gpsGraph = pg.PlotWidget()
         self.gpsGraph.clear()
         self.gpsGraph.setRange(yRange=[-85, -87])
+        self.gpsGraph.setTitle('GPS', **{'color': '#FFF', 'size': '14pt'})
         self.gpsGraph.setLabels(left='Longitude (°)', bottom='Latitude (°)')
         self.gpsGraph.setBackground(graphBackground)
         pen = pg.mkPen(color=containerColor)
@@ -184,23 +220,24 @@ class Display(QWidget):
         self.gpsGraphPlot = self.gpsGraph.plot(latitude, longitude, pen=pen, name='GPS', symbol='o')
 
     #creates the other (currently) non-real time graphs
-    def createGraphs(self):
-        self.rotationGraph = pg.PlotWidget()
-        self.rotationGraph.setRange(yRange=[1790, 1810])
-        self.rotationGraph.setTitle('Rotation Rate', **{'color': '#FFF', 'size': '14pt'})
-        self.rotationGraph.setLabels(left='Rotation Rate (°/s)', bottom='Time (s)')
+    def createSP1RotationGraph(self):
+        self.SP1rotationGraph = pg.PlotWidget()
+        self.SP1rotationGraph.setRange(yRange=[1790, 1810])
+        self.SP1rotationGraph.setTitle('Rotation Rate', **{'color': '#FFF', 'size': '14pt'})
+        self.SP1rotationGraph.setLabels(left='Rotation Rate (°/s)', bottom='Time (s)')
         self.x = list(range(25))  # 100 time points
         self.y = [randint(1800,1804) for _ in range(25)]  # 100 data points
-        self.rotationGraph.setBackground(graphBackground)
+        self.SP1rotationGraph.setBackground(graphBackground)
         pen = pg.mkPen(color=sp1Color)
-        self.rotationGraph.plot(self.x, self.y, pen=pen)
+        self.SP1rotationGraph.plot(self.x, self.y, pen=pen)
         self.x = list(range(25))  # 100 time points
         self.y = [randint(1800,1804) for _ in range(25)]   # 100 data points
         pen = pg.mkPen(color=sp2Color)
-        self.rotationGraph.getAxis('bottom').setPen('w')
-        self.rotationGraph.getAxis('left').setPen('w')
-        self.rotationGraph.plot(self.x, self.y, pen=pen)
+        self.SP1rotationGraph.getAxis('bottom').setPen('w')
+        self.SP1rotationGraph.getAxis('left').setPen('w')
+        self.SP1rotationGraph.plot(self.x, self.y, pen=pen)
 
+    def createSP1AirTempGraph(self):
         self.airTempGraph = pg.PlotWidget()
         self.airTempGraph.setRange(yRange=[26.3, 26.9])
         self.airTempGraph.setTitle('Air Temperature', **{'color': '#FFF', 'size': '14pt'})
@@ -346,7 +383,8 @@ class Display(QWidget):
 
     #updates all of the graphs with data coming from xbee
     def updateAllGraphs(self):
-        self.altitudePlot.setData(graphsX, containerAltY)
+        self.contAltitudePlot.setData(contGraphsX, containerAltY)
+        self.SP1AltitudePlot.setData(SP1GraphsX, SP1AltY)
         self.battBox.children()[0].itemAt(1).widget().setText(containerBattY) #path to the battery voltage box
         self.gpsGraphPlot.setData(latitude, longitude)
         #print(self.utcBox.children()[0].itemAt(1).widget())

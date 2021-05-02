@@ -1347,12 +1347,16 @@ int gpsDelayStart;
 //DEFINE PAYLOAD SENSOR VARS FOR RELAY
 
 //OTHER GLOBAL VARS TO DEFINE
-int incomingByte = 0;
+//int incomingByte = 0;
 
 //DEFINE RECEIVING DATA VARS
 const byte numChars = 40;
 char receivedChars[numChars];
 boolean newData = false;
+
+const byte numChars2 = 50;
+char receivedChars2[numChars2];
+boolean newData2 = false;
 
 float previousAlts[10];
 float deltaAlt[10];
@@ -1381,6 +1385,8 @@ void setup() {
   Serial1.println("begin test");
   Serial2.begin(9600); 
   while (!Serial2){ Serial1.print("xbee aint starting"); };
+  Serial3.begin(9600);
+  while (!Serial3){ Serial2.print("xbee2 aint starting"); };
   Serial2.println("STARTING CONTAINER SOFTWARE");
   Serial1.println("past serial begin");
 
@@ -1421,8 +1427,8 @@ void loop() {
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
-    pres = sensors.getPressure();
-    //pres = fakeData[x] / 100;
+    //pres = sensors.getPressure();
+    pres = fakeData[x] / 100;
     x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
@@ -1492,6 +1498,8 @@ void loop() {
   if((currentTs - readDelayStart) > readDelayNum){
      recvWithStartEndMarkers();
      showNewData();
+     recvWithStartEndMarkers2();
+     showNewData2();
      readDelayStart = millis();
    }
 
@@ -1522,8 +1530,9 @@ void altitudeCheck(){
   }
   averageDeltaAlt = total / 10;
 
-  if(averageDeltaAlt < -0.1 && flightStage != 1){
+  if(averageDeltaAlt < -1.0 && flightStage != 1){
     Serial2.println("transition to flight stage 1");
+    Serial2.println(averageDeltaAlt);
     flightStage = 1;
 
     if(DO_WRITE_TO_FLASH){
@@ -1649,6 +1658,51 @@ void showNewData() {
         }
         
         newData = false;
+    }
+}
+
+void recvWithStartEndMarkers2() {
+    static boolean recvInProgress = false;
+    static byte ndx = 0;
+    char startMarker = '<';
+    char endMarker = '>';
+    char rc;
+    
+    while (Serial3.available() > 0 && newData2 == false) {
+        rc = Serial3.read();
+
+        if (recvInProgress == true) {
+            if (rc != endMarker) {
+                receivedChars2[ndx] = rc;
+                ndx++;
+                if (ndx >= numChars2) {
+                    ndx = numChars2 - 1;
+                }
+            }
+            else {
+                receivedChars2[ndx] = '\0'; // terminate the string
+                recvInProgress = false;
+                ndx = 0;
+                newData2 = true;
+            }
+        }
+
+        else if (rc == startMarker) {
+            recvInProgress = true;
+        }
+    }
+}
+
+void showNewData2() {
+    if (newData2 == true) {
+        String stringVersionReceivedChars;
+        stringVersionReceivedChars = receivedChars2;
+        /*if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
+          Serial2.println("CMD_2617_CX_PING");
+          lastCommand = "PING";          */
+        Serial2.println(stringVersionReceivedChars);
+        
+        newData2 = false;
     }
 }
 
