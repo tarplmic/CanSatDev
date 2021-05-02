@@ -1330,6 +1330,7 @@ float fakeData[1325] = {100833,
 Sensors sensors(6);
 TimeFunctions timeFunctions;
 Servo myServo1;
+Servo myServo2;
 
 //DEFINE DELAY VARS
 const int sensorDelayNum = 100;
@@ -1427,8 +1428,8 @@ void loop() {
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
-    //pres = sensors.getPressure();
-    pres = fakeData[x] / 100;
+    pres = sensors.getPressure();
+   // pres = fakeData[x] / 100;
     x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
@@ -1655,6 +1656,18 @@ void showNewData() {
           Serial2.println("recieved off command");
           lastCommand = "CXOFF";
           doSendData = 0;
+          
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,ZEROSERVOS"){
+          Serial2.println("recieved zero servos command");
+          lastCommand = "ZEROSERVOS";
+          myServo2.attach(9); //pin 9 arduino is pin 12 samd
+          myServo2.write(0);
+          delay(100);
+          myServo2.detach();
+          myServo1.attach(15); //pin 15 arduino is pin 7 samd
+          myServo1.write(0);
+          delay(100);
+          myServo1.detach();
         }
         
         newData = false;

@@ -9,13 +9,13 @@ int pos = 0;
 void setup() {
   
   // put your setup code here, to run once:
-  delay(2000);
-  myServo.attach(9);
+  //delay(2000);
+  myServo.attach(15);
   //myServo.write(115);
 
-  //delay(1000);
+  delay(1000);
 
-  myServo.write(140);
+  myServo.write(0);
   //delay(2000);
 
   //myServo.write(115);
