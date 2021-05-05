@@ -17,7 +17,7 @@ sp1Color = (0, 255, 0)
 global sp2Color 
 sp2Color = (0, 0, 255)
 global graphBackground 
-graphBackground = (70, 70, 70)
+graphBackground = (255, 255, 255)
 global entireBackground 
 entireBackground = QColor('black')
 
@@ -41,7 +41,7 @@ longitude = [-86]
 global utcTimeY
 utcTimeY = "00:00:00"
 global serialLine
-serialLine = ""
+serialLine = "blank" + "\n" + "blank" + "\n" + "blank"
 
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
@@ -71,7 +71,12 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
-            serialLine = self.line
+            serialLineArray = serialLine.split()
+            serialLineArray.pop(0)
+            serialLineArray.append(self.line)
+            serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2]
+
+
             self.line = self.line.strip()
             self.line = self.line.split(',')
             if(len(self.line) >= 20):
@@ -96,8 +101,6 @@ class xbeeDataThread(QThread):
         self.line = ""
 
     def parseSP1Data(self, line):
-        global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
-        global utcTimeY
 
         #line = line.split(',')
         self.sp1PacketCount += 1
@@ -114,6 +117,9 @@ class xbeeDataThread(QThread):
         #print(line)
 
     def parseContainerData(self, line):
+        global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
+        global utcTimeY
+
         self.contPacketCount += 1
         if self.contPacketCount > graphFrameLimit:
             contGraphsX.pop(0)
@@ -200,7 +206,7 @@ class Display(QWidget):
         self.SP1AltitudeGraph.setRange(yRange=[0, 200])
         self.SP1AltitudeGraph.setTitle('SP1 Altitude', **{'color': '#FFF', 'size': '14pt'})
         self.SP1AltitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
-        pen = pg.mkPen(color=sp1Color)
+        pen = pg.mkPen(color=sp2Color)
         self.SP1AltitudeGraph.setBackground(graphBackground)
         self.SP1AltitudeGraph.getAxis('bottom').setPen('w')
         self.SP1AltitudeGraph.getAxis('left').setPen('w')
@@ -366,10 +372,10 @@ class Display(QWidget):
         serialBoxLabel.setAlignment(Qt.AlignCenter)
         serialBoxLabel.setStyleSheet("color: white")
         serialBoxLayout.addWidget(serialBoxLabel)
-        serialBoxText = QLineEdit()
+        serialBoxText = QTextEdit()
         serialBoxText.setAlignment(Qt.AlignCenter)
         serialBoxText.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
-        serialBoxText.setFixedSize(600,35)
+        serialBoxText.setFixedSize(900,80)
         serialBoxLayout.addWidget(serialBoxText)
         #serialBoxLayout.addStretch()
         self.serialBox.setLayout(serialBoxLayout)

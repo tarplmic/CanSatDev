@@ -3,7 +3,7 @@
 //GND COMMAND FORMAT
 //CMD,2617,CX,PING
 
-float fakeData[1325] = {100833,
+/*float fakeData[1325] = {100833,
 100833,
 100833,
 100833,
@@ -1319,7 +1319,7 @@ float fakeData[1325] = {100833,
 100893,
 100893,
 100893
-};
+};*/
 
 //INCLUDE ALL HEADER FILES NEEDED
 #include <init.h> //includes necessary libraries and initializes data vars
@@ -1371,11 +1371,14 @@ float rawRotRateX[10];
 float rawRotRateY[10];
 float rawRotRateZ[10];
 
-const int DO_WRITE_TO_FLASH = 0;
+const int DO_WRITE_TO_FLASH = 1;
 FlashStorage(flightStageFlash, int);
 FlashStorage(altCorrectionFlash, int);
 
 int doSendData = 1;
+
+int openLogPacketCount = 0;
+float openLogAverageDeltaAlt;
 
 void setup() {
   pinMode(ledPin, OUTPUT);
@@ -1392,8 +1395,13 @@ void setup() {
   Serial1.println("past serial begin");
 
   if(DO_WRITE_TO_FLASH){
+    Serial1.println("ABOUT TO READ INITIAL VARS FROM FLASH");
     altCorrection = altCorrectionFlash.read();
     flightStage = flightStageFlash.read();
+    Serial1.println("alt Correction");
+    Serial1.println(altCorrection);
+    Serial1.println("flight stage");
+    Serial1.println(flightStage);
   }
   
   sensors.init();
@@ -1417,20 +1425,19 @@ void setup() {
   
 }
 
-int x = 0;
+//int x = 0;
 int currentTs;
 
 void loop() {
   currentTs = millis();
-  
   
   //INTERVAL TO GET SENSOR DATA
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
     pres = sensors.getPressure();
-   // pres = fakeData[x] / 100;
-    x++;
+    //pres = fakeData[x] / 100;
+    //x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
     rawRotRateX[sampleIndex] = sensors.getRotRateX();
@@ -1470,9 +1477,10 @@ void loop() {
       sampleIndex++;
     }
 
-    Serial1.println(String(millis()) + "," + String(rotRate[0]) + "," + String(rotRate[1]) + "," + String(rotRate[2]) + "," + String(alt) + "," + String(tem) +
+    Serial1.println(String(millis()) + "," + String(openLogPacketCount) + "," + String(rotRate[0]) + "," + String(rotRate[1]) + "," + String(rotRate[2]) + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + 
-                  String(gpsSats) + "," + String(flightStage) + "," + lastCommand + "," + altCorrection);
+                  String(gpsSats) + "," + String(flightStage) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
+    openLogPacketCount++;
 
     sensorDelayStart = millis();
   }
@@ -1516,7 +1524,7 @@ void printToXbee(){
   
     Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
-                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection);
+                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     packetCount += 1;
   }
 }
@@ -1530,10 +1538,14 @@ void altitudeCheck(){
     total += deltaAlt[i];
   }
   averageDeltaAlt = total / 10;
+  openLogAverageDeltaAlt = averageDeltaAlt;
 
   if(averageDeltaAlt < -1.0 && flightStage != 1){
     Serial2.println("transition to flight stage 1");
     Serial2.println(averageDeltaAlt);
+    Serial1.println("transition to flight stage 1");
+    Serial1.println(averageDeltaAlt);
+    
     flightStage = 1;
 
     if(DO_WRITE_TO_FLASH){
@@ -1558,11 +1570,13 @@ void altitudeCheck(){
     
     if(shouldDeploy1 && sp1Released == "N"){
       Serial2.println("DEPLOY PAYLOAD 1");
+      Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
       sp1Released = "Y";
     }
     if(shouldDeploy2 && sp2Released == "N"){
       Serial2.println("DEPLOY PAYLOAD 2");
+      Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo2();
       sp2Released = "Y";
     }
@@ -1624,7 +1638,7 @@ void showNewData() {
           sensors.releaseServo2();
 
         }else if(stringVersionReceivedChars.substring(0, 28) == "CMD,2617,CX,SETALTCORRECTION"){
-          Serial2.println(stringVersionReceivedChars);
+          Serial2.println("alt command recieved");
           
           String sentAltCorrect = stringVersionReceivedChars.substring(29);
           altCorrection = sentAltCorrect.toInt();
