@@ -7,8 +7,8 @@
 #define PAD_SERIAL_RX2 (SERCOM_RX_PAD_3)
 #define PAD_SERIAL_TX2 (UART_TX_PAD_2)
 
-#define PIN_SERIAL_RX3 (35) //microcontrollers RX, Xbee TX
-#define PIN_SERIAL_TX3 (37) //microcontroller's TX, xbee RX
+#define PIN_SERIAL_RX3 (35) //microcontrollers TX, Xbee RX
+#define PIN_SERIAL_TX3 (37) //microcontroller's RX, xbee TX
 #define PAD_SERIAL_RX3 (SERCOM_RX_PAD_1)
 #define PAD_SERIAL_TX3 (UART_TX_PAD_0)
 

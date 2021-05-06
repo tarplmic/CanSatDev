@@ -102,14 +102,15 @@ float Sensors::getRotRateZ(){
 
 float Sensors::getLat(){
     float latitude = myGPS.getLatitude();
-    latitude = latitude / 10000000;
+    //latitude = latitude / 10000000;
+    
     //return 4;
     return latitude;
 }
 
 float Sensors::getLong(){
     float longitude = myGPS.getLongitude();
-    longitude = longitude / 10000000;
+    //longitude = longitude / 10000000;
     return longitude;
     //return 2;
     //return myGPS.getSIV();
@@ -129,7 +130,7 @@ String Sensors::getGPSTime(){
         gpsTime += myGPS.getMonth();
         gpsTime += "-";
         gpsTime += myGPS.getDay();
-        gpsTime += " ";
+        gpsTime += "-";
     }else{
         gpsTime += "notvalid:";
     }
@@ -170,7 +171,7 @@ void Sensors::releaseServo1(){
 
 void Sensors::releaseServo2(){
     delay(100);
-    myServo2.attach(9); //pin 15 arduino is pin 7 samd
+    myServo2.attach(9); //pin 9 arduino is pin 12 samd
     myServo2.write(30);
     delay(100);
     myServo2.write(140);
