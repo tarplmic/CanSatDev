@@ -101,7 +101,7 @@ float Sensors::getRotRateZ(){
 }
 
 float Sensors::getLat(){
-    float latitude = myGPS.getLatitude();
+    float latitude = myGPS.getLatitude(50);
     //latitude = latitude / 10000000;
     
     //return 4;
@@ -109,7 +109,7 @@ float Sensors::getLat(){
 }
 
 float Sensors::getLong(){
-    float longitude = myGPS.getLongitude();
+    float longitude = myGPS.getLongitude(50);
     //longitude = longitude / 10000000;
     return longitude;
     //return 2;
@@ -117,31 +117,31 @@ float Sensors::getLong(){
 }
 
 float Sensors::getGPSAlt(){
-    float altitude = myGPS.getAltitude();
+    float altitude = myGPS.getAltitude(50);
     return altitude / 1000;
 }
 
 String Sensors::getGPSTime(){
     String gpsTime = "";
-    if (myGPS.getDateValid() == true)
+    if (myGPS.getDateValid(50) == true)
     {
-        gpsTime += myGPS.getYear();
+        gpsTime += myGPS.getYear(50);
         gpsTime += "-";
-        gpsTime += myGPS.getMonth();
+        gpsTime += myGPS.getMonth(50);
         gpsTime += "-";
-        gpsTime += myGPS.getDay();
+        gpsTime += myGPS.getDay(50);
         gpsTime += "-";
     }else{
         gpsTime += "notvalid:";
     }
 
-    if (myGPS.getTimeValid() == true)
+    if (myGPS.getTimeValid(50) == true)
     {
-        gpsTime += myGPS.getHour();
+        gpsTime += myGPS.getHour(50);
         gpsTime += ":";
-        gpsTime += myGPS.getMinute();
+        gpsTime += myGPS.getMinute(50);
         gpsTime += ":";
-        gpsTime += myGPS.getSecond();
+        gpsTime += myGPS.getSecond(50);
     }else{
         gpsTime += "notvalid";
     }
@@ -149,7 +149,7 @@ String Sensors::getGPSTime(){
 }
 
 int Sensors::getNumSats(){
-    return myGPS.getSIV();
+    return myGPS.getSIV(50);
 }
 
 float Sensors::getBattVoltage(){

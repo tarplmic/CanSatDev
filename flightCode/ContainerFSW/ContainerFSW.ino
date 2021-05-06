@@ -3,7 +3,7 @@
 //GND COMMAND FORMAT
 //CMD,2617,CX,PING
 
-/*float fakeData[1325] = {100833,
+float fakeData[1325] = {100833,
 100833,
 100833,
 100833,
@@ -1319,7 +1319,7 @@
 100893,
 100893,
 100893
-};*/
+};
 
 //INCLUDE ALL HEADER FILES NEEDED
 #include <init.h> //includes necessary libraries and initializes data vars
@@ -1341,7 +1341,7 @@ const int readDelayNum = 10;
 int readDelayStart;
 const int altCheckDelayNum = 500;
 int altCheckDelayStart;
-const int gpsDelayNum = 2000;
+const int gpsDelayNum = 1000;
 int gpsDelayStart;
 
 //container sensor vars, alt correction, and othe global vars are defined in init.h
@@ -1364,6 +1364,7 @@ float deltaAlt[10];
 float previousAlt;
 float currentAlt; 
 int deltaAltSampleIndex = 0;
+int FS1reqCounter = 0;
 
 int sampleIndex = 0;
 
@@ -1427,7 +1428,7 @@ void setup() {
   
 }
 
-//int x = 0;
+int x = 0;
 int currentTs;
 
 void loop() {
@@ -1437,9 +1438,9 @@ void loop() {
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
-    pres = sensors.getPressure();
-    //pres = fakeData[x] / 100;
-    //x++;
+    //pres = sensors.getPressure();
+    pres = fakeData[x] / 100;
+    x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
     rawRotRateX[sampleIndex] = sensors.getRotRateX();
@@ -1553,7 +1554,21 @@ void altitudeCheck(){
   averageDeltaAlt = total / 10;
   openLogAverageDeltaAlt = averageDeltaAlt;
 
-  if(averageDeltaAlt < -1.0 && flightStage != 1){
+  if(averageDeltaAlt < -1.0 && flightStage != 1 && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
+    FS1reqCounter++;
+    Serial2.println("FS1reqCounter incremented");
+    
+  }else if(averageDeltaAlt < -0.75 && flightStage != 1){ //has to be atleast -0.75 five times after it was initially -1.0
+    FS1reqCounter++;
+    Serial2.println("FS1reqCounter incremented");
+  }else{//so we did not meet the requirement consecutively and we have not transitioned yet
+    if(FS1reqCounter != 0){
+      FS1reqCounter = 0;
+      Serial2.println("FS1reqCounter reset to 0");
+    }
+  }
+
+  if(FS1reqCounter >= 6){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
     Serial2.println("transition to flight stage 1");
     Serial2.println(averageDeltaAlt);
     Serial1.println("transition to flight stage 1");
