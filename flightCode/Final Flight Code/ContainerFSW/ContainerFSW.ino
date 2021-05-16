@@ -26,7 +26,7 @@ const int altCheckDelayNum = 500;
 int altCheckDelayStart;
 const int gpsDelayNum = 1000;
 int gpsDelayStart;
-const int simGotDataCheckNum = 2000;
+const int simGotDataCheckNum = 1300;
 int simGotDataCheckStart;
 
 //container sensor vars, alt correction, and othe global vars are defined in init.h
@@ -172,9 +172,16 @@ void loop() {
   //INTERVAL TO ASSUME WE ARE AT THE LAST ALTITUDE RECEIVED FROM GND IF IN SIM MODE AND HAVE NOT RECEIVED DATA FROM GND IN MORE THAN __ SECONDS
   if(mode == "S"){
     if((currentTs - simGotDataCheckStart) > simGotDataCheckNum){
-      Serial2.println("assuming at same altitude as before");
+      //Serial2.println("assuming at same altitude as before: " + String(currentAlt));
       
       bmpAltSamples[simPresSampleIndex] = currentAlt;
+
+      if(recFirstSimp) //if we have already received atleast one simp command, can increment altDivisor until it reaches 9
+      {
+        if(altDivisor < 10){
+          altDivisor++;
+        }
+      }
 
       if(simPresSampleIndex == 9){
         simPresSampleIndex = 0;
@@ -273,7 +280,7 @@ void altitudeCheck(){
   }
 
   
-  Serial2.println("avg delta alt: " + String(averageDeltaAlt));
+  //Serial2.println("avg delta alt: " + String(averageDeltaAlt));
   openLogAverageDeltaAlt = averageDeltaAlt;
 
   if(averageDeltaAlt < firstDeltaAltMin && flightStage != 1 && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
@@ -449,6 +456,7 @@ void showNewData() {
             memset(bmpAltSamples, 0, sizeof(bmpAltSamples));
             altDivisor = 1;
             deltaAltSampleIndex = 0;
+            currentAlt = 0;
           }
           
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,DISABLE"){
@@ -500,7 +508,7 @@ void showNewData() {
                 deltaAltSampleIndex++;
               }*/
 
-              Serial2.println("curr: " + String(currentAlt) + " prev: " + String(previousAlt) + " delta: " + String(currentAlt - previousAlt));
+              //Serial2.println("curr: " + String(currentAlt) + " prev: " + String(previousAlt) + " delta: " + String(currentAlt - previousAlt));
 
               recFirstSimp = true; //make true because we have recieved atleast one simp command 
             }
