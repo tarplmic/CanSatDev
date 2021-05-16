@@ -59,6 +59,8 @@ boolean newData2 = false;
 
 float previousAlts[10];
 float deltaAlt[10];
+float simDeltaAlt[3];
+float mostRecentSimDeltaAlt;
 float previousAlt;
 float currentAlt; 
 int deltaAltSampleIndex = 0;
@@ -67,6 +69,7 @@ int FS1reqCounter = 0;
 int sampleIndex = 0;
 int simPresSampleIndex = 0;
 bool recFirstSimp = false;
+float calculatedAlt;
 
 float bmpAltSamples[10];
 float voltageSamples[10];

@@ -26,8 +26,8 @@ const int altCheckDelayNum = 500;
 int altCheckDelayStart;
 const int gpsDelayNum = 1000;
 int gpsDelayStart;
-const int simDeltaAltCalculationNum = 1000;
-int simDeltaAltCalculationStart;
+const int simGotDataCheckNum = 2000;
+int simGotDataCheckStart;
 
 //container sensor vars, alt correction, and othe global vars are defined in init.h
 //DEFINE PAYLOAD SENSOR VARS FOR RELAY
@@ -82,7 +82,7 @@ void setup() {
   altCheckDelayStart = millis();
   gpsDelayStart = millis();
   gpsDelayStart = millis();
-  simDeltaAltCalculationStart = millis();
+  simGotDataCheckStart = millis();
 
   //delay(10000);
   //sensors.stopCamera();
@@ -135,7 +135,7 @@ void loop() {
     rotRate[1] = totalRotRateY / 10;
     rotRate[2] = totalRotRateZ / 10;
     
-    //CALCULATE DELTA ALT
+    //CALCULATE DELTA ALT HERE IF IN FLIGHT MODE
     if(mode == "F"){
       previousAlt = currentAlt;
       currentAlt = alt;
@@ -169,15 +169,27 @@ void loop() {
     sensorDelayStart = millis();
   }
 
-  //JUST CALCULATE DELTAALT FOR SIM MODE EVERY TIME WE GET A NEW PRES READING FROM GROUND
-  /*if(mode == "S"){
-    if((currentTs - simDeltaAltCalculationStart) > simDeltaAltCalculationNum){
-      //calculate delta alt while in simulation mode
-      //Serial2.println("would calulcate delt alt for sim");
+  //INTERVAL TO ASSUME WE ARE AT THE LAST ALTITUDE RECEIVED FROM GND IF IN SIM MODE AND HAVE NOT RECEIVED DATA FROM GND IN MORE THAN __ SECONDS
+  if(mode == "S"){
+    if((currentTs - simGotDataCheckStart) > simGotDataCheckNum){
+      Serial2.println("assuming at same altitude as before");
+      
+      bmpAltSamples[simPresSampleIndex] = currentAlt;
 
-      simDeltaAltCalculationStart = millis();
+      if(simPresSampleIndex == 9){
+        simPresSampleIndex = 0;
+      }else{
+        simPresSampleIndex++;
+      }
+
+      previousAlt = currentAlt;
+      currentAlt = calculatedAlt;
+
+      mostRecentSimDeltaAlt = currentAlt - previousAlt;
+      
+      simGotDataCheckStart = millis();
     }
-  }*/
+  }
 
   //INTERVAL TO GET GPS DATA
   if((currentTs - gpsDelayStart) > gpsDelayNum){
@@ -231,19 +243,47 @@ void altitudeCheck(){
   //calculate the average change in altitude of the past 10 delta altitudes 
   float total;
   float averageDeltaAlt;
-  for(int i = 0; i < 10; i++){
-    total += deltaAlt[i];
+
+  float firstDeltaAltMin;
+  float secondDeltaAltMin;
+  int fs1ReqNum;
+  
+  if(mode == "F"){
+    firstDeltaAltMin = -1.0;
+    secondDeltaAltMin = -0.75;
+    fs1ReqNum = 6;
+  
+    for(int i = 0; i < 10; i++){
+      total += deltaAlt[i];
+    }
+    averageDeltaAlt = total / 10;
+    
+  }else{ //if mode == "S"
+    firstDeltaAltMin = -10.0;
+    secondDeltaAltMin = -7.5;
+    fs1ReqNum = 6;
+    
+    /*for(int i = 0; i < 3; i++){
+      total += simDeltaAlt[i];
+    }
+    averageDeltaAlt = total / 3;*/
+
+    averageDeltaAlt = mostRecentSimDeltaAlt;
+    
   }
-  averageDeltaAlt = total / 10;
+
+  
+  Serial2.println("avg delta alt: " + String(averageDeltaAlt));
   openLogAverageDeltaAlt = averageDeltaAlt;
 
-  if(averageDeltaAlt < -1.0 && flightStage != 1 && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
+  if(averageDeltaAlt < firstDeltaAltMin && flightStage != 1 && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
     Serial2.println("FS1reqCounter incremented");
     
-  }else if(averageDeltaAlt < -0.75 && flightStage != 1){ //has to be atleast -0.75 five times after it was initially -1.0
+  }else if(averageDeltaAlt < secondDeltaAltMin && flightStage != 1){ //has to be atleast -0.75 five times after it was initially -1.0
     FS1reqCounter++;
     Serial2.println("FS1reqCounter incremented");
+    
   }else{//so we did not meet the requirement consecutively and we have not transitioned yet
     if(FS1reqCounter != 0){
       FS1reqCounter = 0;
@@ -251,7 +291,7 @@ void altitudeCheck(){
     }
   }
 
-  if(FS1reqCounter >= 6){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
+  if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
     Serial2.println("transition to flight stage 1");
     Serial2.println(averageDeltaAlt);
     Serial1.println("transition to flight stage 1");
@@ -408,6 +448,7 @@ void showNewData() {
             //clear altitude samples from sensor 
             memset(bmpAltSamples, 0, sizeof(bmpAltSamples));
             altDivisor = 1;
+            deltaAltSampleIndex = 0;
           }
           
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,DISABLE"){
@@ -416,9 +457,12 @@ void showNewData() {
           memset(bmpAltSamples, 0, sizeof(bmpAltSamples));
           altDivisor = 0;
           recFirstSimp = false;
+          deltaAltSampleIndex = 0;
+          simEnableRec = 0;
           
         }else if(stringVersionReceivedChars.substring(0, 13) == "CMD,2617,SIMP"){
           if(mode == "S"){
+            simGotDataCheckStart = millis(); //reset got data check (if we actually received each simp data packet from ground once a second, this gotDataCheck wouldn't execute)
             
             if(recFirstSimp) //if we have already received atleast one simp command, can increment altDivisor until it reaches 9
             {
@@ -432,14 +476,31 @@ void showNewData() {
             
             pres = stringVersionReceivedChars.substring(14).toFloat();
             calculatedAlt = 44330*(1 - pow((pres/101325), (1/5.255)));
+
             if(!(calculatedAlt > 1000 && calculatedAlt < 0)){
-              bmpAltSamples[simPresSampleIndex] = 44330*(1 - pow((pres/101325), (1/5.255)));
+              bmpAltSamples[simPresSampleIndex] = calculatedAlt;
 
               if(simPresSampleIndex == 9){
                 simPresSampleIndex = 0;
               }else{
                 simPresSampleIndex++;
               }
+
+              previousAlt = currentAlt;
+              currentAlt = calculatedAlt;
+
+              mostRecentSimDeltaAlt = currentAlt - previousAlt; 
+
+              /*simDeltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
+              previousAlts[deltaAltSampleIndex] = currentAlt;
+            
+              if(deltaAltSampleIndex == 2){
+                deltaAltSampleIndex = 0;
+              }else{
+                deltaAltSampleIndex++;
+              }*/
+
+              Serial2.println("curr: " + String(currentAlt) + " prev: " + String(previousAlt) + " delta: " + String(currentAlt - previousAlt));
 
               recFirstSimp = true; //make true because we have recieved atleast one simp command 
             }
