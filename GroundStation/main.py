@@ -76,7 +76,6 @@ class xbeeDataThread(QThread):
             serialLineArray.append(self.line)
             serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2]
 
-
             self.line = self.line.strip()
             self.line = self.line.split(',')
             if(len(self.line) >= 20):
@@ -88,10 +87,6 @@ class xbeeDataThread(QThread):
                     print("WE GOT PAYLOAD  1 DATA")
                     print(self.line)
                     self.parseSP1Data(self.line)
-                #elif(self.line == "PING_RECIEVED"):
-                #    print("WE GOT PING_RECIEVED")
-            # elif(self.line == "RELEASE CMD RECIEVED"):
-                #    print("VERIFIED RELEASE CMD RECEIVED")
             for x in range(len(self.line)):
                 if(x == "PING_RECIEVED"):
                     print("WE GOT PING RECIEVED")
@@ -113,8 +108,6 @@ class xbeeDataThread(QThread):
         with open('Flight_2617_SP1.csv','a',newline='') as fd:
             csvData = csv.writer(fd, delimiter=",")
             csvData.writerow(line)
-        #print(containerBattY)
-        #print(line)
 
     def parseContainerData(self, line):
         global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
