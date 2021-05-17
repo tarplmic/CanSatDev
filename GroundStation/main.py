@@ -43,6 +43,11 @@ utcTimeY = "00:00:00"
 global serialLine
 serialLine = "blank" + "\n" + "blank" + "\n" + "blank"
 
+global simIndex 
+simIndex = 0
+global simIndexArray
+simIndexArray = []
+
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
     def __init__(self):
@@ -153,6 +158,7 @@ class Display(QWidget):
         self.createSerialBox()
         self.createSP1RotationGraph()
         self.createSP1AltGraph()
+        self.createSimButton()
         self.changeGraphics()
 
         self.dataCollectionThread = xbeeDataThread()
@@ -176,7 +182,8 @@ class Display(QWidget):
         grid.addWidget(self.utcBox, 3, 0, Qt.AlignCenter)
         grid.addWidget(self.battBox, 3, 1, Qt.AlignCenter)
         grid.addWidget(self.mqttButt, 3, 2, Qt.AlignCenter)
-        grid.addWidget(self.serialBox, 4, 0, 1, 4, Qt.AlignCenter)
+        grid.addWidget(self.serialBox, 4, 0, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self.simButt, 4, 2, 1, 1, Qt.AlignCenter)
         self.setLayout(grid)
 
     #create the altitude real time graph
@@ -277,6 +284,7 @@ class Display(QWidget):
         line_edit.setReadOnly(True) 
         commandBoxesLayout.addWidget(commandBox)
         sendButt = QPushButton('Send Command')
+        sendButt.setFixedSize(100,80)
         sendButt.clicked.connect(self.sendCommand)
         sendButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
         commandBoxesLayout.addWidget(sendButt)
@@ -289,7 +297,7 @@ class Display(QWidget):
         commandLayout.addWidget(self.altCorrectInput)
         
         self.mqttButt = QPushButton("MQTT: Disabled")
-        self.mqttButt.setFixedSize(100, 30)
+        self.mqttButt.setFixedSize(100, 50)
         self.mqttButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
         self.mqttButt.setCheckable(True)
         self.mqttButt.toggle()
@@ -373,6 +381,40 @@ class Display(QWidget):
         #serialBoxLayout.addStretch()
         self.serialBox.setLayout(serialBoxLayout)
 
+    def createSimButton(self):
+        self.simButt = QPushButton("Not sending SIMP")
+        self.simButt.setFixedSize(150, 50)
+        self.simButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
+        self.simButt.setCheckable(True)
+        self.simButt.toggle()
+        self.simButt.clicked.connect(self.simButtonClicked)
+
+    def simButtonClicked(self):
+        if self.simButt.isChecked():
+            self.simButt.setStyleSheet('background-color:grey; color:white; border:3px solid; border-color:grey') 
+            self.simButt.setText("Am sending SIMP")
+
+            with open('simData.txt','r') as fd:
+                for line in fd:
+                    line = line.replace('$', '2617')
+                    line = line.replace('\n', '')
+                    line = "<" + line + ">"
+                    simIndexArray.append(line)
+
+
+            self.sendSimDataThread = sendSimData(self.sendSimDataFun)
+            self.sendSimDataThread.start()
+
+        else:
+            self.simButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
+            self.simButt.setText("Not sending SIMP")
+    
+    def sendSimDataFun(self):
+        global simIndex
+        cmdToSend = simIndexArray[simIndex]
+        self.dataCollectionThread.xbee.write(cmdToSend.encode())
+        simIndex += 1
+
 
     #creates title for the app
     def createTitle(self):
@@ -437,6 +479,19 @@ class updateGraphs(QThread):
 
     def run(self):
         self.updateGraphsTimer.start(50)
+        loop = QEventLoop()
+        loop.exec_()
+
+class sendSimData(QThread):
+    def __init__(self, func):
+        super().__init__()
+        self.func = func
+        self.sendSimDataTimer = QTimer()
+        self.sendSimDataTimer.moveToThread(self)
+        self.sendSimDataTimer.timeout.connect(self.func)
+
+    def run(self):
+        self.sendSimDataTimer.start(1000)
         loop = QEventLoop()
         loop.exec_()
 

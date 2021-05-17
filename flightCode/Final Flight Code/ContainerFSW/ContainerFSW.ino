@@ -22,7 +22,7 @@ const int printDelayNum = 1000;
 int printDelayStart;
 const int readDelayNum = 10;
 int readDelayStart;
-const int altCheckDelayNum = 500;
+const int altCheckDelayNum = 1000;
 int altCheckDelayStart;
 const int gpsDelayNum = 1000;
 int gpsDelayStart;
@@ -258,7 +258,7 @@ void altitudeCheck(){
   if(mode == "F"){
     firstDeltaAltMin = -1.0;
     secondDeltaAltMin = -0.75;
-    fs1ReqNum = 6;
+    fs1ReqNum = 3;
   
     for(int i = 0; i < 10; i++){
       total += deltaAlt[i];
@@ -268,7 +268,7 @@ void altitudeCheck(){
   }else{ //if mode == "S"
     firstDeltaAltMin = -10.0;
     secondDeltaAltMin = -7.5;
-    fs1ReqNum = 6;
+    fs1ReqNum = 3;
     
     /*for(int i = 0; i < 3; i++){
       total += simDeltaAlt[i];
@@ -457,6 +457,7 @@ void showNewData() {
             altDivisor = 1;
             deltaAltSampleIndex = 0;
             currentAlt = 0;
+            flightStage = 0;
           }
           
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,DISABLE"){
@@ -467,6 +468,7 @@ void showNewData() {
           recFirstSimp = false;
           deltaAltSampleIndex = 0;
           simEnableRec = 0;
+          flightStage = 0;
           
         }else if(stringVersionReceivedChars.substring(0, 13) == "CMD,2617,SIMP"){
           if(mode == "S"){
