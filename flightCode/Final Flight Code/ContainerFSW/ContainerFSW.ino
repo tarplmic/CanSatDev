@@ -496,6 +496,10 @@ void showNewData() {
               //if(fishyAltFlag)
               //somehow compare fishyDeltaAlt (previous delta alt with weird data), mostRecentSimDeltaAlt (previous previous delta alt (before weird data), and the current delta (calculatedAlt - fishyAlt)
               //fishyAltFlag = 0
+              //either setaltMakesSense to 0 or 1 depending on result of comparison  //actually may not need to do this b/c going to add in next line
+              //if altMakesSense //if we see it does make sense to add, add it. if not, dont do anything with data (throw out)
+              //add the fishyDeltaAlt to samples and make mostRecentSimDeltaAlt = fishyDeltaAlt
+              //altMakesSense = 0 //reset altMakesSense so that one line later it will actually be comparing new data and deciding wether to add that
               //
               //if delta alt > 100 //interest is first peaked, add to temp variable to store fishy data fishyAlt
               //set fishyAltFlag = 1
