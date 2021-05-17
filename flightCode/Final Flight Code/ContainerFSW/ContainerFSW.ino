@@ -487,33 +487,56 @@ void showNewData() {
             pres = stringVersionReceivedChars.substring(14).toFloat();
             calculatedAlt = 44330*(1 - pow((pres/101325), (1/5.255)));
 
-            if(!(calculatedAlt > 1000 && calculatedAlt < 0)){
-              bmpAltSamples[simPresSampleIndex] = calculatedAlt;
-
-              if(simPresSampleIndex == 9){
-                simPresSampleIndex = 0;
-              }else{
-                simPresSampleIndex++;
-              }
-
-              previousAlt = currentAlt;
-              currentAlt = calculatedAlt;
-
-              mostRecentSimDeltaAlt = currentAlt - previousAlt; 
-
-              /*simDeltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
-              previousAlts[deltaAltSampleIndex] = currentAlt;
-            
-              if(deltaAltSampleIndex == 2){
-                deltaAltSampleIndex = 0;
-              }else{
-                deltaAltSampleIndex++;
-              }*/
-
-              //Serial2.println("curr: " + String(currentAlt) + " prev: " + String(previousAlt) + " delta: " + String(currentAlt - previousAlt));
-
-              recFirstSimp = true; //make true because we have recieved atleast one simp command 
+            if(!recFirstSimp){ //if this is the first simp command we've received, say that the altiude does make sense (need a baseline)
+              altMakesSense = 1;
+              
+            }else{
+              //add some code to determine if the altiude makes sense based on the previous alt, current alt, and delta between the two and either do or dont set altMakesSense
+              //previous alt at his point is still the previous altitude and calculatedAlt is the new one. mostRecentSimDeltaAlt would be the previous delta alt, can calculate new delta alt with prev and calculated
+              //if(fishyAltFlag)
+              //somehow compare fishyDeltaAlt (previous delta alt with weird data), mostRecentSimDeltaAlt (previous previous delta alt (before weird data), and the current delta (calculatedAlt - fishyAlt)
+              //fishyAltFlag = 0
+              //
+              //if delta alt > 100 //interest is first peaked, add to temp variable to store fishy data fishyAlt
+              //set fishyAltFlag = 1
+              //fishyAlt = calculatedAlt
+              //fishyDeltaALt = fishyAlt - previousAlt //previous alt will stay as the previous alt (not changed to fishyAlt the next time through)
+              //altmakesSense = 0 //wouldnt acallt have to do this
+              
             }
+
+            
+            if(!(calculatedAlt > 1000 && calculatedAlt < 0)){
+              if(altMakesSense){
+                bmpAltSamples[simPresSampleIndex] = calculatedAlt;
+
+                if(simPresSampleIndex == 9){
+                  simPresSampleIndex = 0;
+                }else{
+                  simPresSampleIndex++;
+                }
+  
+                previousAlt = currentAlt;
+                currentAlt = calculatedAlt;
+  
+                mostRecentSimDeltaAlt = currentAlt - previousAlt; 
+  
+                /*simDeltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
+                previousAlts[deltaAltSampleIndex] = currentAlt;
+              
+                if(deltaAltSampleIndex == 2){
+                  deltaAltSampleIndex = 0;
+                }else{
+                  deltaAltSampleIndex++;
+                }*/
+  
+                //Serial2.println("curr: " + String(currentAlt) + " prev: " + String(previousAlt) + " delta: " + String(currentAlt - previousAlt));
+  
+                recFirstSimp = true; //make true because we have recieved atleast one simp command 
+              }
+            }
+
+            altMakesSense = 0; //reset altMakesSense
           }
         }
         
