@@ -277,7 +277,7 @@ class Display(QWidget):
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
         #commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
-        commandBox.addItems(["CX_ON", "CX_OFF", "CX_PING", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE"])
+        commandBox.addItems(["CX_ON", "CX_OFF", "CX_PING", "SP1_ON", "SP1_OFF", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -466,6 +466,14 @@ class Display(QWidget):
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SIM_DISABLE"):
             print('About to send sim disable')
             dat = "<CMD,2617,SIM,DISABLE>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SP1_ON"):
+            print('About to send SP1_on')
+            dat = "<CMD,2617,SP1X,ON>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SP1_OFF"):
+            print('About to send sp1_off')
+            dat = "<CMD,2617,SP1X,OFF>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs

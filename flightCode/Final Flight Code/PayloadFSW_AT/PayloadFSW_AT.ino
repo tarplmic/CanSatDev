@@ -12,7 +12,7 @@ String thermTempStr;
 int openLogPacketCount = 0; 
 
 // Science Payload 1
-String packetType = "SP1";
+String packetType = "S1";
 
 // Sensors
 Adafruit_BMP3XX bmp; 
@@ -20,7 +20,7 @@ Adafruit_BNO055 bno;
 
 // Flight stage commands
 String command = "";
-bool sendTelem = true;
+bool sendTelem = false;
 bool collectData = true;
 
 // Delays
@@ -94,6 +94,8 @@ void setup() {
   printDelayStart = millis();
   sendDelayStart = millis();
   readDelayStart = millis();
+
+  bmp.performReading(); //dummy read
 }
 
 void loop() {
@@ -101,14 +103,22 @@ void loop() {
     currentTs = millis();
 
     /*READ XBEE*/
-    /*if((currentTs - readDelayStart) > readDelayNum){
-     command = readXBee();
-     if (command == "CMD,2617,SP1X,ON")
+    if((currentTs - readDelayStart) > readDelayNum){
+     /*command = readXBee();
+     if (command == "CMD,2617,SP1X,ON"){
         sendTelem = true;
-     else if (command == "CMD,2617,SP1X,OFF")
+        Serial2.println("RECIEVEED SP1X ON");
+     }else if (command == "CMD,2617,SP1X,OFF"){
         sendTelem = false;
+        Serial2.println(sendTelem);
+        Serial2.println("RECIEVEED SP1X OFF");
+        readDelayStart = millis();
+     }
+     */
+     recvWithStartEndMarkers();
+     showNewData();
      readDelayStart = millis();
-   }*/
+   }
     
     /*COLLECT DATA*/
     
@@ -170,7 +180,7 @@ void loop() {
         //CALCULATE DELTA ALT
         previousAlt = currentAlt;
         currentAlt = alt;
-        if(!(currentAlt > 1000 && currentAlt < 0)){
+        if(!(currentAlt > 1000 || currentAlt < 0)){
           deltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
           previousAlts[deltaAltSampleIndex] = currentAlt;
         
@@ -238,7 +248,7 @@ String xbeePacket(const int teamID, String missionTime, int &packetCount, String
     
     packetCount += 1;
     
-    String message = "<" + String(teamID) + "," + runMillis + "," + String(packetCount) + "," + packetType + "," + String(alt) + "," + thermTemp + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
+    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + String(alt) + "," + thermTemp + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
 
     return message;
 }
@@ -321,4 +331,54 @@ String readXBee(){
     Serial1.println("command received");
     return msg;
   
+}
+
+void recvWithStartEndMarkers() {
+    static boolean recvInProgress = false;
+    static byte ndx = 0;
+    char startMarker = '<';
+    char endMarker = '>';
+    char rc;
+    
+    while (Serial2.available() > 0 && newData == false) {
+        rc = Serial2.read();
+
+        if (recvInProgress == true) {
+            if (rc != endMarker) {
+                receivedChars[ndx] = rc;
+                ndx++;
+                if (ndx >= numChars) {
+                    ndx = numChars - 1;
+                }
+            }
+            else {
+                receivedChars[ndx] = '\0'; // terminate the string
+                recvInProgress = false;
+                ndx = 0;
+                newData = true;
+            }
+        }
+
+        else if (rc == startMarker) {
+            recvInProgress = true;
+        }
+    }
+}
+
+void showNewData() {
+  if (newData == true) {
+    String stringVersionReceivedChars;
+    stringVersionReceivedChars = receivedChars;
+
+    if (stringVersionReceivedChars == "CMD,2617,SP1X,ON"){
+        sendTelem = true;
+        Serial2.println("RECIEVEED SP1X ON");
+     }else if (stringVersionReceivedChars == "CMD,2617,SP1X,OFF"){
+        sendTelem = false;
+        Serial2.println(sendTelem);
+        Serial2.println("RECIEVEED SP1X OFF");
+     }
+    
+    newData = false;
+    }
 }

@@ -32,7 +32,7 @@ float gpsLat = 0;
 float gpsLong = 0;
 float gpsAlt = 0;
 int gpsSats = 0; 
-int flightStage = 0; //operating state of the software, softwareState
+String flightStage = "rising"; //operating state of the software, softwareState
 int sp1PacketCount = 0;
 int sp2PacketCount = 0;
 String lastCommand = "test"; //cmd echo
@@ -65,11 +65,14 @@ float previousAlt;
 float currentAlt; 
 int deltaAltSampleIndex = 0;
 int FS1reqCounter = 0;
+int deploySP1reqCounter = 0;
+int deploySP2reqCounter = 0;
 
 int sampleIndex = 0;
 int simPresSampleIndex = 0;
 bool recFirstSimp = false;
 float calculatedAlt;
+int altMakesSense = 0;
 
 float bmpAltSamples[10];
 float voltageSamples[10];
