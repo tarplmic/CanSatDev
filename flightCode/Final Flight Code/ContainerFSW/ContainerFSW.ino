@@ -38,7 +38,7 @@ const int DO_WRITE_TO_FLASH = 0;
 FlashStorage(flightStageFlash, String);
 FlashStorage(altCorrectionFlash, int);
 
-int doSendData = 1;
+int doSendData = 0;
 
 int openLogPacketCount = 0;
 float openLogAverageDeltaAlt;
@@ -50,11 +50,11 @@ void setup() {
   Serial1.begin(115200); //openlog
   while (!Serial1) { Serial1.println("open log aint starting"); };
   Serial1.println("begin test");
-  Serial.begin(9600); 
-  while (!Serial){ Serial1.print("xbee aint starting"); };
+  Serial2.begin(9600); 
+  while (!Serial2){ Serial1.print("xbee aint starting"); };
   Serial3.begin(9600);
   while (!Serial3){ Serial.print("xbee2 aint starting"); };
-  Serial.println("STARTING CONTAINER SOFTWARE");
+  Serial2.println("STARTING CONTAINER SOFTWARE");
   Serial1.println("past serial begin");
 
   if(DO_WRITE_TO_FLASH){
@@ -152,7 +152,7 @@ void loop() {
           deltaAltSampleIndex++;
         }
       }else{
-        Serial.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
+        Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
         Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
       }
     }
@@ -239,7 +239,7 @@ void printToXbee(){
   if(doSendData){
     missionTime = timeFunctions.getTime();
   
-    Serial.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
+    Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
                   String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     packetCount += 1;
@@ -285,29 +285,29 @@ void altitudeCheck(){
 
   if(averageDeltaAlt < firstDeltaAltMin && flightStage != "falling" && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
-    Serial.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounter incremented");
     
   }else if(averageDeltaAlt < secondDeltaAltMin && flightStage != "falling"){ //has to be atleast -0.75 five times after it was initially -1.0
     FS1reqCounter++;
-    Serial.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounter incremented");
     
   }else{//so we did not meet the requirement consecutively and we have not transitioned yet
     if(FS1reqCounter != 0){
       FS1reqCounter = 0;
-      Serial.println("FS1reqCounter reset to 0");
+      Serial2.println("FS1reqCounter reset to 0");
     }
   }
 
   if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
-    Serial.println("transition to flight stage 1");
-    Serial.println(averageDeltaAlt);
+    Serial2.println("transition to flight stage 1");
+    Serial2.println(averageDeltaAlt);
     Serial1.println("transition to flight stage 1");
     Serial1.println(averageDeltaAlt);
     
     flightStage = "falling";
 
     if(DO_WRITE_TO_FLASH){
-      Serial.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
+      Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
       flightStageFlash.write(flightStage);
     }
   }
@@ -356,13 +356,13 @@ void altitudeCheck(){
    }
    
    if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 2){
-      Serial.println("DEPLOY PAYLOAD 1");
+      Serial2.println("DEPLOY PAYLOAD 1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
       sp1Released = "R";
     }
     if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 2){
-      Serial.println("DEPLOY PAYLOAD 2");
+      Serial2.println("DEPLOY PAYLOAD 2");
       Serial1.println("DEPLOY PAYLOAD 2");
       sensors.releaseServo2();
       sp2Released = "R";
@@ -383,8 +383,8 @@ void recvWithStartEndMarkers() {
     char endMarker = '>';
     char rc;
  
-    while (Serial.available() > 0 && newData == false) {
-        rc = Serial.read();
+    while (Serial2.available() > 0 && newData == false) {
+        rc = Serial2.read();
 
         if (recvInProgress == true) {
             if (rc != endMarker) {
@@ -414,7 +414,7 @@ void showNewData() {
         stringVersionReceivedChars = receivedChars;
         
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial.println("CMD_2617_CX_PING");
+          Serial2.println("CMD_2617_CX_PING");
           lastCommand = "PING";
           
         }else if(stringVersionReceivedChars == "CMD,2617,CX,RELEASE"){
@@ -433,7 +433,7 @@ void showNewData() {
           lastCommand = "SETALTCORRECTION";
 
           if(DO_WRITE_TO_FLASH){
-            Serial.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
+            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
             altCorrectionFlash.write(altCorrection);
           }
           
@@ -443,7 +443,7 @@ void showNewData() {
             flightStage = "rising";
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
-              Serial.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
               // clear values
               flightStageFlash.write("rising");
               altCorrectionFlash.write(0);
@@ -487,7 +487,7 @@ void showNewData() {
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,ACTIVATE"){
           //Serial.println("recieved sim activate command");
           if(simEnableRec){
-            Serial.println("SWITCH TO SIMULATION MODE");
+            Serial2.println("SWITCH TO SIMULATION MODE");
             mode = "S";
 
             lastCommand = "SIM_ACTIVATE";
@@ -649,12 +649,12 @@ void showNewData2() {
   if (newData2 == true) {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars2;
-        /*2617,,,SP1,53,38.9,-0.03,-0.02*/
+        /*2617,,,S1,53,38.9,-0.03,-0.02*/
         firstPart = stringVersionReceivedChars.substring(0, 4);
         secondPart = stringVersionReceivedChars.substring(7);
         middlePart = "," + String(missionTime) + "," + String(packetCount) + ",";
         sendToGnd = firstPart + middlePart + secondPart;
-        Serial.println(sendToGnd);
+        Serial2.println(sendToGnd);
         packetCount += 1;
         
         newData2 = false;

@@ -94,8 +94,8 @@ void recvWithStartEndMarkers() {
     char endMarker = '>';
     char rc;
  
-    while (Serial.available() > 0 && newData == false) {
-        rc = Serial.read();
+    while (Serial2.available() > 0 && newData == false) {
+        rc = Serial2.read();
 
         if (recvInProgress == true) {
             if (rc != endMarker) {
@@ -125,7 +125,7 @@ void showNewData() {
         stringVersionReceivedChars = receivedChars;
         
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial.println("CMD_2617_CX_PING");
+          Serial2.println("CMD_2617_CX_PING");
         }
         
         newData = false;

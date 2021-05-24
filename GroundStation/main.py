@@ -8,6 +8,7 @@ import pyqtgraph as pg
 from random import uniform, randint
 import serial
 import csv
+import paho.mqtt.client as mqtt
 
 #define global variables
 global containerColor
@@ -41,12 +42,45 @@ longitude = [-86]
 global utcTimeY
 utcTimeY = "00:00:00"
 global serialLine
-serialLine = "blank" + "\n" + "blank" + "\n" + "blank"
+serialLine = "blank" + "\n" + "blank" + "\n" + "blank" + "\n" + "blank"
+global serialLine2
+serialLine2 = "blank" + "\n" + "blank" + "\n" + "blank"
+global serialLine3
+serialLine3 = "blank" + "\n" + "blank" + "\n" + "blank"
 
 global simIndex 
 simIndex = 0
 global simIndexArray
 simIndexArray = []
+
+###MQTT SETUP###
+# Define event callbacks
+def on_connect(client, userdata, flags, rc):
+    print("rc: " + str(rc))
+def on_message(client, obj, msg):
+    print(msg.topic + " " + str(msg.qos) + " " + str(msg.payload))
+def on_publish(client, obj, mid):
+    print("mid: " + str(mid))
+def on_subscribe(client, obj, mid, granted_qos):
+    print("Subscribed: " + str(mid) + " " + str(granted_qos))
+def on_log(client, obj, level, string):
+    print(string)
+# setup mqtt client call backs
+mqttc = mqtt.Client()
+# Assign event callbacks
+mqttc.on_message = on_message
+mqttc.on_connect = on_connect
+mqttc.on_publish = on_publish
+mqttc.on_subscribe = on_subscribe
+# Uncomment to enable debug messages
+mqttc.on_log = on_log
+topic = 'teams/2617' # team number
+# Connect
+mqttc.username_pw_set("t1010", "t1010pass") # made up username and password
+#mqttc.connect(url.hostname, url.port) # establish connection
+mqttc.connect("cansat.info",1883)
+###MQTT SETUP###
+
 
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
@@ -58,7 +92,7 @@ class xbeeDataThread(QThread):
         self.xbee = QtSerialPort.QSerialPort()
         self.xbee.setPortName('COM3')
         self.xbee.setBaudRate(9600)
-        self.line = ""
+        self.line = ",,,,,,"
 
         if self.xbee.open(QtSerialPort.QSerialPort.ReadWrite) == False:
             return
@@ -69,6 +103,8 @@ class xbeeDataThread(QThread):
 
     def getData(self):
         global serialLine
+        global serialLine2
+        global serialLine3
 
         while(self.xbee.canReadLine()):
             newData = self.xbee.readLine()
@@ -76,10 +112,36 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
-            serialLineArray = serialLine.split()
-            serialLineArray.pop(0)
-            serialLineArray.append(self.line)
-            serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2]
+            if(self.line.split(',')[3] == "C"):
+                #PUBLISH TO MQTT
+                mqttDat = self.line.strip().split(',')
+                mqttDat.pop()
+                mqttDat.pop()
+                mqttDatStr = ""
+                for i in range(len(mqttDat)):
+                    if(i != len(mqttDat) - 1):
+                        mqttDatStr += str(mqttDat[i]) + ","
+                    else:
+                        mqttDatStr += str(mqttDat[i])
+
+                print(mqttDatStr)
+                mqttc.publish(topic, self.line.strip()) 
+                #PUBLISH TO MQTT
+
+                serialLineArray = serialLine.split()
+                serialLineArray.pop(0)
+                serialLineArray.append(self.line)
+                serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2] + "\n" + serialLineArray[3]
+            elif(self.line.split(',')[3] == "S1" or self.line.split(',')[3] == "S2"):
+                serialLineArray2 = serialLine2.split()
+                serialLineArray2.pop(0)
+                serialLineArray2.append(self.line)
+                serialLine2 = serialLineArray2[0] + "\n" + serialLineArray2[1] + "\n" + serialLineArray2[2]
+            else:
+                serialLineArray3 = serialLine3.split()
+                serialLineArray3.pop(0)
+                serialLineArray3.append(self.line)
+                serialLine3 = serialLineArray3[0] + "\n" + serialLineArray3[1] + "\n" + serialLineArray3[2]
 
             self.line = self.line.strip()
             self.line = self.line.split(',')
@@ -181,9 +243,11 @@ class Display(QWidget):
         grid.addWidget(self.commandWid, 2, 2)
         grid.addWidget(self.utcBox, 3, 0, Qt.AlignCenter)
         grid.addWidget(self.battBox, 3, 1, Qt.AlignCenter)
-        grid.addWidget(self.mqttButt, 3, 2, Qt.AlignCenter)
-        grid.addWidget(self.serialBox, 4, 0, 1, 2, Qt.AlignCenter)
-        grid.addWidget(self.simButt, 4, 2, 1, 1, Qt.AlignCenter)
+        grid.addWidget(self.mqttSimWid, 3, 2, Qt.AlignCenter)
+        grid.addWidget(self.serialBox, 5, 0, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self.serialBox2, 5, 2, 1, 1, Qt.AlignCenter)
+        grid.addWidget(self.serialBox3, 6, 0, 1, 4, Qt.AlignCenter)
+        #grid.addWidget(self.simButt, 3, 3, 1, 1, Qt.AlignCenter)
         self.setLayout(grid)
 
     #create the altitude real time graph
@@ -191,7 +255,7 @@ class Display(QWidget):
         self.altitudeGraph = pg.PlotWidget()
         self.altitudeGraph.clear()
         self.altitudeGraph.setRange(yRange=[0, 200])
-        self.altitudeGraph.setTitle('Container Altitude', **{'color': '#FFF', 'size': '14pt'})
+        self.altitudeGraph.setTitle('Container Altitude', **{'color': '#000', 'size': '14pt'})
         self.altitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
         pen = pg.mkPen(color=containerColor)
         self.altitudeGraph.setBackground(graphBackground)
@@ -204,7 +268,7 @@ class Display(QWidget):
         self.SP1AltitudeGraph = pg.PlotWidget()
         self.SP1AltitudeGraph.clear()
         self.SP1AltitudeGraph.setRange(yRange=[0, 200])
-        self.SP1AltitudeGraph.setTitle('SP1 Altitude', **{'color': '#FFF', 'size': '14pt'})
+        self.SP1AltitudeGraph.setTitle('SP1 Altitude', **{'color': '#000', 'size': '14pt'})
         self.SP1AltitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
         pen = pg.mkPen(color=sp2Color)
         self.SP1AltitudeGraph.setBackground(graphBackground)
@@ -217,7 +281,7 @@ class Display(QWidget):
         self.gpsGraph = pg.PlotWidget()
         self.gpsGraph.clear()
         self.gpsGraph.setRange(yRange=[-85, -87])
-        self.gpsGraph.setTitle('GPS', **{'color': '#FFF', 'size': '14pt'})
+        self.gpsGraph.setTitle('GPS', **{'color': '#000', 'size': '14pt'})
         self.gpsGraph.setLabels(left='Longitude (°)', bottom='Latitude (°)')
         self.gpsGraph.setBackground(graphBackground)
         pen = pg.mkPen(color=containerColor)
@@ -229,7 +293,7 @@ class Display(QWidget):
     def createSP1RotationGraph(self):
         self.SP1rotationGraph = pg.PlotWidget()
         self.SP1rotationGraph.setRange(yRange=[1790, 1810])
-        self.SP1rotationGraph.setTitle('Rotation Rate', **{'color': '#FFF', 'size': '14pt'})
+        self.SP1rotationGraph.setTitle('Rotation Rate', **{'color': '#000', 'size': '14pt'})
         self.SP1rotationGraph.setLabels(left='Rotation Rate (°/s)', bottom='Time (s)')
         self.x = list(range(25))  # 100 time points
         self.y = [randint(1800,1804) for _ in range(25)]  # 100 data points
@@ -246,7 +310,7 @@ class Display(QWidget):
     def createSP1AirTempGraph(self):
         self.airTempGraph = pg.PlotWidget()
         self.airTempGraph.setRange(yRange=[26.3, 26.9])
-        self.airTempGraph.setTitle('Air Temperature', **{'color': '#FFF', 'size': '14pt'})
+        self.airTempGraph.setTitle('Air Temperature', **{'color': '#000', 'size': '14pt'})
         self.airTempGraph.setLabels(left='Temperature (°C)', bottom='Time (s)')
         self.x = list(range(25))  # 100 time points
         self.y = [uniform(26.6,26.7) for _ in range(25)]  # 100 data points
@@ -295,13 +359,6 @@ class Display(QWidget):
         self.altCorrectInput = QLineEdit()
         self.altCorrectInput.returnPressed.connect(self.altCorrectEntered)
         commandLayout.addWidget(self.altCorrectInput)
-        
-        self.mqttButt = QPushButton("MQTT: Disabled")
-        self.mqttButt.setFixedSize(100, 50)
-        self.mqttButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
-        self.mqttButt.setCheckable(True)
-        self.mqttButt.toggle()
-        self.mqttButt.clicked.connect(self.mqttClicked)
 
         commandLayout.setAlignment(Qt.AlignCenter)
         self.commandWid.setLayout(commandLayout)
@@ -381,13 +438,58 @@ class Display(QWidget):
         #serialBoxLayout.addStretch()
         self.serialBox.setLayout(serialBoxLayout)
 
+        self.serialBox2 = QWidget()
+        serialBox2Layout = QVBoxLayout()
+        serialBox2Label = QLabel("Serial Input:")
+        serialBox2Label.setFont(QFont('Arial', 10))
+        serialBox2Label.setAlignment(Qt.AlignCenter)
+        serialBox2Label.setStyleSheet("color: white")
+        serialBox2Layout.addWidget(serialBox2Label)
+        serialBox2Text = QTextEdit()
+        serialBox2Text.setAlignment(Qt.AlignCenter)
+        serialBox2Text.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
+        serialBox2Text.setFixedSize(400,60)
+        serialBox2Layout.addWidget(serialBox2Text)
+        #serialBox2Layout.addStretch()
+        self.serialBox2.setLayout(serialBox2Layout)
+
+        self.serialBox3 = QWidget()
+        serialBox3Layout = QVBoxLayout()
+        serialBox3Label = QLabel("Serial Input:")
+        serialBox3Label.setFont(QFont('Arial', 10))
+        serialBox3Label.setAlignment(Qt.AlignCenter)
+        serialBox3Label.setStyleSheet("color: white")
+        serialBox3Layout.addWidget(serialBox3Label)
+        serialBox3Text = QTextEdit()
+        serialBox3Text.setAlignment(Qt.AlignCenter)
+        serialBox3Text.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
+        serialBox3Text.setFixedSize(900,60)
+        serialBox3Layout.addWidget(serialBox3Text)
+        #serialBox3Layout.addStretch()
+        self.serialBox3.setLayout(serialBox3Layout)
+
     def createSimButton(self):
+        self.mqttSimWid = QWidget()
+        mqttSimLayout = QHBoxLayout()
+
+        self.mqttButt = QPushButton("MQTT: Disabled")
+        self.mqttButt.setFixedSize(100, 50)
+        self.mqttButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
+        self.mqttButt.setCheckable(True)
+        self.mqttButt.toggle()
+        self.mqttButt.clicked.connect(self.mqttClicked)
+        mqttSimLayout.addWidget(self.mqttButt)
+
         self.simButt = QPushButton("Not sending SIMP")
         self.simButt.setFixedSize(150, 50)
         self.simButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
         self.simButt.setCheckable(True)
         self.simButt.toggle()
         self.simButt.clicked.connect(self.simButtonClicked)
+        mqttSimLayout.addWidget(self.simButt)
+
+        mqttSimLayout.setAlignment(Qt.AlignCenter)
+        self.mqttSimWid.setLayout(mqttSimLayout)
 
     def simButtonClicked(self):
         if self.simButt.isChecked():
@@ -431,6 +533,8 @@ class Display(QWidget):
         #print(self.utcBox.children()[0].itemAt(1).widget())
         self.utcBox.children()[0].itemAt(1).widget().setText(utcTimeY)
         self.serialBox.children()[0].itemAt(1).widget().setText(serialLine)
+        self.serialBox2.children()[0].itemAt(1).widget().setText(serialLine2)
+        self.serialBox3.children()[0].itemAt(1).widget().setText(serialLine3)
 
 
     def sendCommand(self):
