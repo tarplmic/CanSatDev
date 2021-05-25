@@ -12,7 +12,7 @@ String thermTempStr;
 int openLogPacketCount = 0; 
 
 // Science Payload 1
-String packetType = "S1";
+String packetType = "SP1";
 
 // Sensors
 Adafruit_BMP3XX bmp; 
@@ -235,7 +235,7 @@ void loop() {
 
 }
 
-String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, int alt, String thermTemp, float rotationZ, float avgDeltaAlt){
+String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, float alt, String thermTemp, float rotationZ, float avgDeltaAlt){
   
     unsigned long runMillis= millis();
     unsigned long allSeconds=millis()/1000;
@@ -248,7 +248,11 @@ String xbeePacket(const int teamID, String missionTime, int &packetCount, String
     
     packetCount += 1;
     
-    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + String(alt) + "," + thermTemp + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
+    altStr = String(alt);
+    altStr = altStr.substring(0, altStr.length() - 1);
+    temStr = String(thermTemp);
+    
+    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + altStr + "," + temStr + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
 
     return message;
 }

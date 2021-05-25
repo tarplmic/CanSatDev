@@ -74,11 +74,11 @@ mqttc.on_publish = on_publish
 mqttc.on_subscribe = on_subscribe
 # Uncomment to enable debug messages
 mqttc.on_log = on_log
-topic = 'teams/2617' # team number
+topic = 'teams/1010' # team number
 # Connect
 mqttc.username_pw_set("t1010", "t1010pass") # made up username and password
 #mqttc.connect(url.hostname, url.port) # establish connection
-mqttc.connect("cansat.info",1883)
+mqttc.connect("cansat.info", 1883)
 ###MQTT SETUP###
 
 
@@ -114,17 +114,17 @@ class xbeeDataThread(QThread):
         if(self.line != ""):
             if(self.line.split(',')[3] == "C"):
                 #PUBLISH TO MQTT
-                mqttDat = self.line.strip().split(',')
-                mqttDat.pop()
-                mqttDat.pop()
-                mqttDatStr = ""
-                for i in range(len(mqttDat)):
-                    if(i != len(mqttDat) - 1):
-                        mqttDatStr += str(mqttDat[i]) + ","
-                    else:
-                        mqttDatStr += str(mqttDat[i])
+                # mqttDat = self.line.strip().split(',')
+                # mqttDat.pop()
+                # mqttDat.pop()
+                # mqttDatStr = ""
+                # for i in range(len(mqttDat)):
+                #     if(i != len(mqttDat) - 1):
+                #         mqttDatStr += str(mqttDat[i]) + ","
+                #     else:
+                #         mqttDatStr += str(mqttDat[i])
 
-                print(mqttDatStr)
+                #print(mqttDatStr)
                 mqttc.publish(topic, self.line.strip()) 
                 #PUBLISH TO MQTT
 
@@ -132,7 +132,10 @@ class xbeeDataThread(QThread):
                 serialLineArray.pop(0)
                 serialLineArray.append(self.line)
                 serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2] + "\n" + serialLineArray[3]
-            elif(self.line.split(',')[3] == "S1" or self.line.split(',')[3] == "S2"):
+            elif(self.line.split(',')[3] == "SP1" or self.line.split(',')[3] == "SP2"):
+                #print(self.line.strip())
+                mqttc.publish(topic, self.line.strip()) 
+                
                 serialLineArray2 = serialLine2.split()
                 serialLineArray2.pop(0)
                 serialLineArray2.append(self.line)

@@ -37,6 +37,15 @@ int sp1PacketCount = 0;
 int sp2PacketCount = 0;
 String lastCommand = "test"; //cmd echo
 
+String altStr = "";
+String temStr = "";
+String gpsLatStr = "";
+String gpsLongStr = "";
+String gpsAltStr = "";
+
+int flightStageFromFlash = 0;
+int flightModeFromFlash = 0;
+
 //INITIALIZE ALT CORRECTION
 int altCorrection = 0;
 

@@ -32,11 +32,13 @@ int simGotDataCheckStart;
 //container sensor vars, alt correction, and othe global vars are defined in init.h
 //DEFINE PAYLOAD SENSOR VARS FOR RELAY
 
-
 //DEFINE FLASH VARIABLES 
 const int DO_WRITE_TO_FLASH = 0;
-FlashStorage(flightStageFlash, String);
+FlashStorage(flightStageFlash, int);
 FlashStorage(altCorrectionFlash, int);
+FlashStorage(packetCountFlash, int);
+FlashStorage(sendTelemFlash, int);
+FlashStorage(flightModeFlash, int);
 
 int doSendData = 0;
 
@@ -60,11 +62,32 @@ void setup() {
   if(DO_WRITE_TO_FLASH){
     Serial1.println("ABOUT TO READ INITIAL VARS FROM FLASH");
     altCorrection = altCorrectionFlash.read();
-    flightStage = flightStageFlash.read();
-    Serial1.println("alt Correction");
-    Serial1.println(altCorrection);
-    Serial1.println("flight stage");
-    Serial1.println(flightStage);
+    
+    flightStageFromFlash = flightStageFlash.read();
+    if(flightStageFromFlash == 0){
+      flightStage = "rising";
+    }else if(flightStageFromFlash == 1){
+      flightStage = "falling";
+    }
+
+    flightModeFromFlash = flightModeFlash.read();
+    if(flightModeFromFlash == 0){
+      mode = "F";
+    }else if(flightModeFromFlash == 1){
+      mode = "S";
+    }
+    
+    packetCount = packetCountFlash.read();
+    doSendData = sendTelemFlash.read();
+    
+    Serial2.println("alt Correction");
+    Serial2.println(altCorrection);
+    Serial2.println("flight stage");
+    Serial2.println(flightStage);
+    Serial2.println("packetCount");
+    Serial2.println(packetCount);
+    Serial2.println("doSendData");
+    Serial2.println(doSendData);
   }
   
   sensors.init();
@@ -238,9 +261,24 @@ void loop() {
 void printToXbee(){
   if(doSendData){
     missionTime = timeFunctions.getTime();
-  
-    Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + String(alt) + "," + String(tem) +
-                  "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
+
+    altStr = String(alt);
+    altStr = altStr.substring(0, altStr.length() - 1);
+    temStr = String(tem);
+    temStr = temStr.substring(0, temStr.length() - 1);
+    gpsLatStr = String(gpsLat);
+    gpsLatStr = gpsLatStr.substring(0, 2);
+    gpsLatStr += ".";
+    gpsLatStr += String(gpsLat).substring(2, 6);
+    gpsLongStr = String(gpsLong);
+    gpsLongStr = gpsLongStr.substring(0, 3);
+    gpsLongStr += ".";
+    gpsLongStr += String(gpsLong).substring(3, 6);
+    gpsAltStr = String(gpsAlt);
+    gpsAltStr = gpsAltStr.substring(0, gpsAltStr.length() - 1);
+    
+    Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + altStr + "," + temStr +
+                  "," + String(voltage) + "," + gpsTime + "," + gpsLatStr + "," + gpsLongStr + "," + gpsAltStr + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
                   String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     packetCount += 1;
   }
@@ -308,7 +346,7 @@ void altitudeCheck(){
 
     if(DO_WRITE_TO_FLASH){
       Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
-      flightStageFlash.write(flightStage);
+      flightStageFlash.write(1);
     }
   }
 
@@ -441,24 +479,38 @@ void showNewData() {
           //Serial.println("received command to clear flash");
             altCorrection = 0;
             flightStage = "rising";
+            doSendData = 0;
+            packetCount = 0;
+            mode = "F";
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
               // clear values
-              flightStageFlash.write("rising");
+              flightStageFlash.write(0);
               altCorrectionFlash.write(0);
+              sendTelemFlash.write(0);
+              packetCountFlash.write(0);
+              flightModeFlash.write(0);
             }
               
         }else if(stringVersionReceivedChars == "CMD,2617,CX,ON"){
               //Serial.println("recieved on command");
               lastCommand = "CXON";
               doSendData = 1;
+              if(DO_WRITE_TO_FLASH){
+                Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+                sendTelemFlash.write(doSendData);
+              }
               
         }else if(stringVersionReceivedChars == "CMD,2617,CX,OFF"){
           //Serial.println("recieved off command");
           lastCommand = "CXOFF";
           doSendData = 0;
-          
+
+          if(DO_WRITE_TO_FLASH){
+            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+            sendTelemFlash.write(doSendData);
+          }
         }else if (stringVersionReceivedChars == "CMD,2617,SP1X,ON"){
           lastCommand = "SP1X_ON";
           Serial3.println("<CMD,2617,SP1X,ON>");
@@ -501,11 +553,24 @@ void showNewData() {
             altCorrection = 0;
             deploySP1reqCounter = 0;
             deploySP2reqCounter = 0;
+
+            if(DO_WRITE_TO_FLASH){
+              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              // clear values
+              flightStageFlash.write(0);
+              altCorrectionFlash.write(0);
+              flightModeFlash.write(1);
+            }
+            
           }
           
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,DISABLE"){
           //Serial.println("recieved sim disable command");
           mode = "F";
+          if(DO_WRITE_TO_FLASH){
+            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: flightModeFlash");
+            flightModeFlash.write(0);
+          }
           memset(bmpAltSamples, 0, sizeof(bmpAltSamples));
           altDivisor = 0;
           recFirstSimp = false;
@@ -515,6 +580,14 @@ void showNewData() {
           altCorrection = 0;
           deploySP1reqCounter = 0;
           deploySP2reqCounter = 0;
+
+          if(DO_WRITE_TO_FLASH){
+              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              // clear values
+              flightStageFlash.write(0);
+              altCorrectionFlash.write(0);
+              flightModeFlash.write(0);
+            }
 
           lastCommand = "SIM_DISABLE";
           
@@ -537,6 +610,10 @@ void showNewData() {
               
             }else{
               altCorrection = calculatedAlt;
+              if(DO_WRITE_TO_FLASH){
+                Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
+                altCorrectionFlash.write(altCorrection);
+              }
             }
 
             if(!recFirstSimp){ //if this is the first simp command we've received, say that the altiude does make sense (need a baseline)
@@ -656,6 +733,7 @@ void showNewData2() {
         sendToGnd = firstPart + middlePart + secondPart;
         Serial2.println(sendToGnd);
         packetCount += 1;
+        sp1PacketCount += 1;
         
         newData2 = false;
     }

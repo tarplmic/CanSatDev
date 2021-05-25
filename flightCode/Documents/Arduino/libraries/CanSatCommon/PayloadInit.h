@@ -47,6 +47,9 @@ float rotation_y = 0;
 float rotation_z = 0;
 float thermTemp = 0;
 
+String altStr = "";
+String temStr = "";
+
 //OTHER GLOBAL VARS
 float pres = 0;
 
