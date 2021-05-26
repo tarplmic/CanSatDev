@@ -12,7 +12,7 @@ String thermTempStr;
 int openLogPacketCount = 0; 
 
 // Science Payload 1
-String packetType = "SP1";
+String packetType = "SP2";
 
 // Sensors
 Adafruit_BMP3XX bmp; 
@@ -67,13 +67,7 @@ void setup() {
   analogReference(AR_DEFAULT); //for thermistor
 
   //start bmp
-  /*if (!bmp.begin_I2C()) {
-    Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
-    Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
-    while (1);
-  }*/
-
-  if (!bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {
+  if (!bmp.begin_I2C()) {
     Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
     Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
     while (1);
@@ -110,25 +104,12 @@ void loop() {
 
     /*READ XBEE*/
     if((currentTs - readDelayStart) > readDelayNum){
-     /*command = readXBee();
-     if (command == "CMD,2617,SP1X,ON"){
-        sendTelem = true;
-        Serial2.println("RECIEVEED SP1X ON");
-     }else if (command == "CMD,2617,SP1X,OFF"){
-        sendTelem = false;
-        Serial2.println(sendTelem);
-        Serial2.println("RECIEVEED SP1X OFF");
-        readDelayStart = millis();
-     }
-     */
      recvWithStartEndMarkers();
      showNewData();
      readDelayStart = millis();
    }
     
     /*COLLECT DATA*/
-    
-
     /*SAMPLE SENSORS*/
     if((currentTs - sensorDelayStart) >= sensorDelayNum){
 
@@ -380,13 +361,13 @@ void showNewData() {
     String stringVersionReceivedChars;
     stringVersionReceivedChars = receivedChars;
 
-    if (stringVersionReceivedChars == "CMD,2617,SP1X,ON"){
+    if (stringVersionReceivedChars == "CMD,2617,SP2X,ON"){
         sendTelem = true;
-        Serial2.println("RECIEVEED SP1X ON");
-     }else if (stringVersionReceivedChars == "CMD,2617,SP1X,OFF"){
+        Serial2.println("RECIEVEED SP2X ON");
+     }else if (stringVersionReceivedChars == "CMD,2617,SP2X,OFF"){
         sendTelem = false;
         Serial2.println(sendTelem);
-        Serial2.println("RECIEVEED SP1X OFF");
+        Serial2.println("RECIEVEED SP2X OFF");
      }
     
     newData = false;
