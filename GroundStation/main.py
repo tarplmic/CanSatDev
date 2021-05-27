@@ -112,6 +112,7 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
+            print(self.line)
             if(self.line.split(',')[3] == "C"):
                 #PUBLISH TO MQTT
                 # mqttDat = self.line.strip().split(',')

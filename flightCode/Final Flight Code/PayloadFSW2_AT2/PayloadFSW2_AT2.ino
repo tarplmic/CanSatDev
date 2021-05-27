@@ -20,7 +20,7 @@ Adafruit_BNO055 bno;
 
 // Flight stage commands
 String command = "";
-bool sendTelem = false;
+bool sendTelem = true;
 bool collectData = true;
 
 // Delays
@@ -72,6 +72,12 @@ void setup() {
     Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
     while (1);
   }
+
+  /*if (!bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {
+    Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
+    Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
+    while (1);
+  }*/
   
   bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
@@ -104,12 +110,25 @@ void loop() {
 
     /*READ XBEE*/
     if((currentTs - readDelayStart) > readDelayNum){
+     /*command = readXBee();
+     if (command == "CMD,2617,SP1X,ON"){
+        sendTelem = true;
+        Serial2.println("RECIEVEED SP1X ON");
+     }else if (command == "CMD,2617,SP1X,OFF"){
+        sendTelem = false;
+        Serial2.println(sendTelem);
+        Serial2.println("RECIEVEED SP1X OFF");
+        readDelayStart = millis();
+     }
+     */
      recvWithStartEndMarkers();
      showNewData();
      readDelayStart = millis();
    }
     
     /*COLLECT DATA*/
+    
+
     /*SAMPLE SENSORS*/
     if((currentTs - sensorDelayStart) >= sensorDelayNum){
 
