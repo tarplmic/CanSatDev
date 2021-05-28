@@ -56,6 +56,9 @@ void setup() {
   while (!Serial2){ Serial1.print("xbee aint starting"); };
   Serial3.begin(9600);
   while (!Serial3){ Serial.print("xbee2 aint starting"); };
+  Serial.begin(9600); 
+  while (!Serial){ Serial1.print("xbee aint starting"); };
+  Serial.println("start test");
   Serial2.println("STARTING CONTAINER SOFTWARE");
   Serial1.println("past serial begin");
 
@@ -97,7 +100,7 @@ void setup() {
   dummy = sensors.getPressure();
   
   Serial1.println("past sensor init");
-  Serial1.println("Time, rotRateX, rotRateY, rotRateZ, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
+  Serial1.println("Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
   
   sensorDelayStart = millis();
   printDelayStart = millis();
@@ -136,30 +139,30 @@ void loop() {
 
     tem = sensors.getTemp();
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
-    rawRotRateX[sampleIndex] = sensors.getRotRateX();
-    rawRotRateY[sampleIndex] = sensors.getRotRateY();
-    rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
+    //rawRotRateX[sampleIndex] = sensors.getRotRateX();
+    //rawRotRateY[sampleIndex] = sensors.getRotRateY();
+    //rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
 
     //PERFORM AVERAGING
     float totalAltitudes = 0;
     float totalVoltages = 0;
-    float totalRotRateX = 0;
-    float totalRotRateY = 0;
-    float totalRotRateZ = 0;
+    //float totalRotRateX = 0;
+    //float totalRotRateY = 0;
+    //float totalRotRateZ = 0;
     for(int i = 0; i < 10; i++){
       totalAltitudes += bmpAltSamples[i];
       totalVoltages += voltageSamples[i];
-      totalRotRateX += rawRotRateX[i];
-      totalRotRateY += rawRotRateY[i];
-      totalRotRateZ += rawRotRateZ[i];
+      //totalRotRateX += rawRotRateX[i];
+      //totalRotRateY += rawRotRateY[i];
+      //totalRotRateZ += rawRotRateZ[i];
     }
     if(mode == "F"){
       alt = totalAltitudes / altDivisor;
     }
     voltage = totalVoltages / 10;
-    rotRate[0] = totalRotRateX / 10;
-    rotRate[1] = totalRotRateY / 10;
-    rotRate[2] = totalRotRateZ / 10;
+    //rotRate[0] = totalRotRateX / 10;
+    //rotRate[1] = totalRotRateY / 10;
+    //rotRate[2] = totalRotRateZ / 10;
     
     //CALCULATE DELTA ALT HERE IF IN FLIGHT MODE
     if(mode == "F"){
@@ -187,7 +190,7 @@ void loop() {
       sampleIndex++;
     }
 
-    Serial1.println(String(millis()) + "," + String(openLogPacketCount) + "," + String(rotRate[0]) + "," + String(rotRate[1]) + "," + String(rotRate[2]) + "," + String(alt) + "," + String(tem) +
+    Serial1.println(String(millis()) + "," + String(openLogPacketCount) + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + 
                   String(gpsSats) + "," + String(flightStage) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     openLogPacketCount++;
@@ -756,10 +759,10 @@ void recvWithStartEndMarkers3() {
     char startMarker = '<';
     char endMarker = '>';
     char rc;
-    
+
     while (Serial.available() > 0 && newData3 == false) {
         rc = Serial.read();
-        Serial2.println("in serial avail");
+        //Serial2.println("in serial avail");
 
         if (recvInProgress3 == true) {
             if (rc != endMarker) {

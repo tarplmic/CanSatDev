@@ -45,9 +45,9 @@ void SERCOM4_Handler()
 }*/
 #include <SerialDefinitions.h> //initialize Serial2 and Serial3
 
-const byte numChars = 40;
-char receivedChars[numChars];
-boolean newData = false;
+const byte numChars3 = 50;
+char receivedChars3[numChars3];
+boolean newData3 = false;
 
 const int readDelayNum = 10;
 int readDelayStart;
@@ -61,10 +61,11 @@ void setup() {
   //Serial1.println("trying out xbee");
   
   pinMode(ledPin, OUTPUT);
-  digitalWrite(ledPin, LOW);
+  digitalWrite(ledPin, HIGH);
   
-  Serial2.begin(9600); 
-  while (!Serial2){ Serial1.print("xbee aint starting"); };
+  Serial.begin(9600); 
+  while (!Serial){ Serial1.print("xbee aint starting"); };
+  Serial.println("start tes");
   readDelayStart = millis();
   printDelayStart = millis();
 
@@ -75,59 +76,61 @@ void loop() {
   //Serial.println("test");
   currentTs = millis();
    if((currentTs - printDelayStart) > printDelayNum){
-    Serial2.println("test");
+    Serial.println("test");
     printDelayStart = millis();
   }
   
   if((currentTs - readDelayStart) > readDelayNum){
-     recvWithStartEndMarkers();
-     showNewData();
+     recvWithStartEndMarkers3();
+     showNewData3();
      readDelayStart = millis();
    }
   
 }
 
-void recvWithStartEndMarkers() {
-    static boolean recvInProgress = false;
+void recvWithStartEndMarkers3() {
+    static boolean recvInProgress3 = false;
     static byte ndx = 0;
     char startMarker = '<';
     char endMarker = '>';
     char rc;
- 
-    while (Serial2.available() > 0 && newData == false) {
-        rc = Serial2.read();
 
-        if (recvInProgress == true) {
+    while (Serial.available() > 0 && newData3 == false) {
+        rc = Serial.read();
+        Serial.println("in serial avail");
+
+        if (recvInProgress3 == true) {
             if (rc != endMarker) {
-                receivedChars[ndx] = rc;
+                receivedChars3[ndx] = rc;
                 ndx++;
-                if (ndx >= numChars) {
-                    ndx = numChars - 1;
+                if (ndx >= numChars3) {
+                    ndx = numChars3 - 1;
                 }
             }
             else {
-                receivedChars[ndx] = '\0'; // terminate the string
-                recvInProgress = false;
+                receivedChars3[ndx] = '\0'; // terminate the string
+                recvInProgress3 = false;
                 ndx = 0;
-                newData = true;
+                newData3 = true;
             }
         }
 
         else if (rc == startMarker) {
-            recvInProgress = true;
+            recvInProgress3 = true;
         }
     }
 }
 
-void showNewData() {
-    if (newData == true) {
+void showNewData3() {
+  String firstPart;
+  String secondPart;
+  String middlePart;
+  String sendToGnd;
+  
+  if (newData3 == true) {
         String stringVersionReceivedChars;
-        stringVersionReceivedChars = receivedChars;
-        
-        if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial2.println("CMD_2617_CX_PING");
-        }
-        
-        newData = false;
+        stringVersionReceivedChars = receivedChars3;
+        Serial.println(stringVersionReceivedChars);
+        newData3 = false;
     }
 }

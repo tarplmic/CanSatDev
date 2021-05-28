@@ -61,7 +61,7 @@ void setup() {
   while (!Serial2){
     Serial1.println("XBee not starting");
   };
-
+  
   Serial2.println("TESTTT");
   
   analogReference(AR_DEFAULT); //for thermistor
