@@ -26,14 +26,14 @@ void Sensors::init()
     bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
     bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
     
-    if(!bno.begin())
-    {
-        while(1){
-            digitalWrite(_pin, LOW);
-        };
-    }
-    delay(10);
-    bno.setExtCrystalUse(true);
+    // if(!bno.begin())
+    // {
+    //     while(1){
+    //         digitalWrite(_pin, LOW);
+    //     };
+    // }
+    // delay(10);
+    // bno.setExtCrystalUse(true);
 
     Wire.begin();
     if (myGPS.begin() == false)
@@ -73,32 +73,32 @@ float Sensors::getTemp()
 }
 
 //never updates, stays 0,0,0
-float* Sensors::getRotRate(){
-    imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-    float gyrox = rotSpeed.x();
-    float gyroy = rotSpeed.y();
-    float gyroz = rotSpeed.z();
-    float rotRate[3] = {gyrox, gyroy, gyroz};
-    return rotRate;
-}
+// float* Sensors::getRotRate(){
+//     imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//     float gyrox = rotSpeed.x();
+//     float gyroy = rotSpeed.y();
+//     float gyroz = rotSpeed.z();
+//     float rotRate[3] = {gyrox, gyroy, gyroz};
+//     return rotRate;
+// }
 
-float Sensors::getRotRateX(){
-    imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-    float gyrox = rotSpeed.x();
-    return gyrox;
-}
+// float Sensors::getRotRateX(){
+//     imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//     float gyrox = rotSpeed.x();
+//     return gyrox;
+// }
 
-float Sensors::getRotRateY(){
-    imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-    float gyroy = rotSpeed.y();
-    return gyroy;
-}
+// float Sensors::getRotRateY(){
+//     imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//     float gyroy = rotSpeed.y();
+//     return gyroy;
+// }
 
-float Sensors::getRotRateZ(){
-    imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-    float gyroz = rotSpeed.z();
-    return gyroz;
-}
+// float Sensors::getRotRateZ(){
+//     imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//     float gyroz = rotSpeed.z();
+//     return gyroz;
+// }
 
 float Sensors::getLat(){
     float latitude = myGPS.getLatitude(50);

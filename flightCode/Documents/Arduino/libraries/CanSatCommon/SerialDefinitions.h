@@ -17,7 +17,6 @@
 // #define PAD_SERIAL_RX4 (SERCOM_RX_PAD_3)
 // #define PAD_SERIAL_TX4 (UART_TX_PAD_2)
 
-
 //Serial1 already defined in arduino 
 //pins 15 (PA10), pin 16 (PA11), SERCOM 0
 

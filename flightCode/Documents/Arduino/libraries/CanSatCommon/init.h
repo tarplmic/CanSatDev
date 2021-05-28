@@ -28,8 +28,8 @@ float alt;
 float tem = 0;
 float voltage = 0; 
 String gpsTime = "00:00:00";
-float gpsLat = 0;
-float gpsLong = 0;
+float gpsLat = 0000000000.00;
+float gpsLong = 0000000000.00;
 float gpsAlt = 0;
 int gpsSats = 0; 
 String flightStage = "rising"; //operating state of the software, softwareState
@@ -53,7 +53,7 @@ int altCorrection = 0;
 float pres;
 float analogReading;
 float analogVoltage;
-float rotRate[3];
+//float rotRate[3];
 int simEnableRec = 0;
 int altDivisor = 0;
 
@@ -65,6 +65,10 @@ boolean newData = false;
 const byte numChars2 = 50;
 char receivedChars2[numChars2];
 boolean newData2 = false;
+
+const byte numChars3 = 50;
+char receivedChars3[numChars3];
+boolean newData3 = false;
 
 float previousAlts[10];
 float deltaAlt[10];
@@ -85,9 +89,9 @@ int altMakesSense = 0;
 
 float bmpAltSamples[10];
 float voltageSamples[10];
-float rawRotRateX[10];
-float rawRotRateY[10];
-float rawRotRateZ[10];
+// float rawRotRateX[10];
+// float rawRotRateY[10];
+// float rawRotRateZ[10];
 
 float fakeData[1325] = {
 100833,
