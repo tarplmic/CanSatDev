@@ -1,9 +1,27 @@
+#include <Adafruit_BNO055.h>
+
+Adafruit_BNO055 bno = Adafruit_BNO055(55); //on same i2c pins as bmp
+
 const int ledPin =  6;
 
 void setup() {
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, LOW);
+
+  Serial1.begin(115200); //openlog
+  while (!Serial1) { Serial1.println("open log aint starting"); };
+  Serial1.println("begin test");
+
+  if(!bno.begin())
+   {
+       while(1){
+           Serial1.println("bno sucks");
+       };
+   }
+   delay(10);
+   bno.setExtCrystalUse(true);
+    
 }
 
 void loop() {
@@ -12,4 +30,11 @@ void loop() {
   delay(500);
   digitalWrite(ledPin, LOW);
   delay(500);
+
+  imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  float gyrox = rotSpeed.x();
+  float gyroy = rotSpeed.y();
+  float gyroz = rotSpeed.z();
+
+  Serial1.println(String(gyrox) + "," + String(gyroy) + "," + String(gyroz));
 }

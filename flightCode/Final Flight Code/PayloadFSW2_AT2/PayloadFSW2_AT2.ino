@@ -140,6 +140,7 @@ void loop() {
       /*BMP DATA*/
       bmp.performReading();
       pres = bmp.pressure / 100.0; //Pa
+      bmpTemperature = bmp.temperature;
       bmpSamples[sampleIndex] = pres;
       
       /*BNO DATA*/
@@ -170,7 +171,6 @@ void loop() {
         float rotation_zSum = 0;
         float thermSum = 0;
         float presAvg = 0;
-        float resistanceAvg = 0;
         
         for (int i=0; i < NUMSAMPLES; i++) {
            presSum += bmpSamples[i];
@@ -203,10 +203,10 @@ void loop() {
         rotation_x = rotation_xSum/NUMSAMPLES;
         rotation_y = rotation_ySum/NUMSAMPLES;
         rotation_z = rotation_zSum/NUMSAMPLES;
-        resistanceAvg = thermSum/NUMSAMPLES;
+        adcReading = thermSum/NUMSAMPLES;
   
         // convert the value to resistance
-        resistanceAvg = 1023 / resistanceAvg - 1;
+        resistanceAvg = 1023 / (adcReading - 1);
         resistanceAvg = SERIESRESISTOR / resistanceAvg;
           
         // calculate temperature from resistance
@@ -219,7 +219,7 @@ void loop() {
         thermTempStr.remove(thermTempStr.length() - 1);
         
         /*CREATE AND PRINT PACKET*/
-        String packet = openLogPacket(missionTime, alt, thermTempStr, rotation_x, rotation_y, rotation_z, openLogAverageDeltaAlt);
+        String packet = openLogPacket(missionTime, alt, String(thermTempStr), rotation_x, rotation_y, rotation_z, openLogAverageDeltaAlt);
         writeSD(packet);
         
         /*RESET PRINT TIMER*/
@@ -234,7 +234,7 @@ void loop() {
 
     /*SEND PACKET*/
     if((currentTs - sendDelayStart >= sendDelayNum) && sendTelem == true){
-      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, thermTempStr, rotation_z, openLogAverageDeltaAlt);
+      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, String(bmpTemperature), rotation_z, openLogAverageDeltaAlt);
       writeXBee(XBEEWrite);  
       sendDelayStart = millis();
     }

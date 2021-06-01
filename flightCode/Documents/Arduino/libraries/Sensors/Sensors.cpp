@@ -100,6 +100,24 @@ float Sensors::getTemp()
 //     return gyroz;
 // }
 
+float Sensors::getAccX(){
+    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    float accx = acc.x();
+    return accx;
+}
+
+float Sensors::getAccY(){
+    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    float accy = acc.y();
+    return accy;
+}
+
+float Sensors::getAccZ(){
+    imu::Vector<3> acc = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
+    float accz = acc.z();
+    return accz;
+}
+
 float Sensors::getLat(){
     float latitude = myGPS.getLatitude(50);
     //latitude = latitude / 10000000;
@@ -172,9 +190,9 @@ void Sensors::releaseServo1(){
 void Sensors::releaseServo2(){
     delay(100);
     myServo2.attach(9); //pin 9 arduino is pin 12 samd
-    myServo2.write(30);
+    myServo2.write(80);
     delay(100);
-    myServo2.write(140);
+    myServo2.write(0);
     delay(1000);
     myServo2.detach();
 }

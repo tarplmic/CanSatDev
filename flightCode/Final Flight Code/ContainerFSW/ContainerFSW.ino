@@ -98,6 +98,8 @@ void setup() {
   dummy = sensors.getPressure();
   dummy = sensors.getTemp();
   dummy = sensors.getPressure();
+
+  Serial2.println("Initialize Sensors");
   
   Serial1.println("past sensor init");
   Serial1.println("Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
@@ -142,6 +144,9 @@ void loop() {
     //rawRotRateX[sampleIndex] = sensors.getRotRateX();
     //rawRotRateY[sampleIndex] = sensors.getRotRateY();
     //rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
+    accx = sensors.getAccX();
+    accy = sensors.getAccY();
+    accz = sensors.getAccZ();
 
     //PERFORM AVERAGING
     float totalAltitudes = 0;
@@ -284,7 +289,7 @@ void printToXbee(){
     
     Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + altStr + "," + temStr +
                   "," + String(voltage) + "," + gpsTime + "," + gpsLatStr + "," + gpsLongStr + "," + gpsAltStr + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
-                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
+                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt) + "," + String(accx) + "," + String(accy) + "," + String(accz));
     packetCount += 1;
   }
 }

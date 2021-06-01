@@ -1,28 +1,15 @@
 #include <Arduino.h>   // required before wiring_private.h
 #include "wiring_private.h" // pinPeripheral() function
-
-#define PIN_SERIAL_RX (38) //microcontrollers RX, Xbee TX
-#define PIN_SERIAL_TX (22) //microcontroller's TX, xbee RX
-#define PAD_SERIAL_RX (SERCOM_RX_PAD_1)
-#define PAD_SERIAL_TX (UART_TX_PAD_0)
+#include "PayloadSerialDefinitions.h"
 
 #define THERMISTORPIN 16  // which analog pin to connect   
 #define SERIESRESISTOR 10000  // the value of the 'other' resistor
 #define TEMPERATURENOMINAL 25 // temp. for nominal resistance (almost always 25 C)
 #define BCOEFFICIENT 3950 // The beta coefficient of the thermistor (usually 3000-4000)
 
- Uart Serial2 (&sercom4, PIN_SERIAL_RX, PIN_SERIAL_TX, PAD_SERIAL_RX, PAD_SERIAL_TX );
-void SERCOM4_Handler()
-{
-  Serial2.IrqHandler();
-}
-
-
 //int samples[NUMSAMPLES];
  
 void setup(void) {
-  pinPeripheral(PIN_SERIAL_RX, PIO_SERCOM);
-  pinPeripheral(PIN_SERIAL_TX, PIO_SERCOM);
 
   Serial2.begin(9600); 
   while (!Serial2)

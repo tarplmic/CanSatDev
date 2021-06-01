@@ -90,7 +90,7 @@ class xbeeDataThread(QThread):
         self.contPacketCount = 0
         self.sp1PacketCount = 0
         self.xbee = QtSerialPort.QSerialPort()
-        self.xbee.setPortName('COM3')
+        self.xbee.setPortName('COM8')
         self.xbee.setBaudRate(9600)
         self.line = ",,,,,,"
 

@@ -63,9 +63,9 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
   
-  Serial.begin(9600); 
+  Serial2.begin(9600); 
   while (!Serial){ Serial1.print("xbee aint starting"); };
-  Serial.println("start tes");
+  Serial2.println("start tes");
   readDelayStart = millis();
   printDelayStart = millis();
 
@@ -76,7 +76,7 @@ void loop() {
   //Serial.println("test");
   currentTs = millis();
    if((currentTs - printDelayStart) > printDelayNum){
-    Serial.println("test");
+    Serial2.println("test");
     printDelayStart = millis();
   }
   
@@ -95,9 +95,9 @@ void recvWithStartEndMarkers3() {
     char endMarker = '>';
     char rc;
 
-    while (Serial.available() > 0 && newData3 == false) {
-        rc = Serial.read();
-        Serial.println("in serial avail");
+    while (Serial2.available() > 0 && newData3 == false) {
+        rc = Serial2.read();
+        Serial2.println(rc);
 
         if (recvInProgress3 == true) {
             if (rc != endMarker) {
@@ -130,7 +130,7 @@ void showNewData3() {
   if (newData3 == true) {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars3;
-        Serial.println(stringVersionReceivedChars);
+        Serial2.println(stringVersionReceivedChars);
         newData3 = false;
     }
 }

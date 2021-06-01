@@ -43,6 +43,10 @@ String gpsLatStr = "";
 String gpsLongStr = "";
 String gpsAltStr = "";
 
+float accx = 0.000;
+float accy = 0.000;
+float accz = 0.000;
+
 int flightStageFromFlash = 0;
 int flightModeFromFlash = 0;
 

@@ -20,7 +20,7 @@ Adafruit_BNO055 bno;
 
 // Flight stage commands
 String command = "";
-bool sendTelem = false;
+bool sendTelem = true;
 bool collectData = true;
 
 // Delays
@@ -140,6 +140,7 @@ void loop() {
       /*BMP DATA*/
       bmp.performReading();
       pres = bmp.pressure / 100.0; //Pa
+      bmpTemperature = bmp.temperature;
       bmpSamples[sampleIndex] = pres;
       
       /*BNO DATA*/
@@ -234,7 +235,7 @@ void loop() {
 
     /*SEND PACKET*/
     if((currentTs - sendDelayStart >= sendDelayNum) && sendTelem == true){
-      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, thermTempStr, rotation_z, openLogAverageDeltaAlt);
+      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, String(bmpTemperature), rotation_z, openLogAverageDeltaAlt);
       writeXBee(XBEEWrite);  
       sendDelayStart = millis();
     }

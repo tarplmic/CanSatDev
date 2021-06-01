@@ -47,6 +47,10 @@ float rotation_y = 0;
 float rotation_z = 0;
 float thermTemp = 0;
 
+float resistanceAvg = 0;
+float adcReading = 0;
+float bmpTemperature = 0;
+
 String altStr = "";
 String temStr = "";
 
