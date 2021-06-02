@@ -50,15 +50,20 @@ void setup() {
   Serial1.println("begin test");
   Serial2.begin(9600); 
   while (!Serial2){ Serial1.print("xbee aint starting"); };
-  Serial3.begin(9600);
-  while (!Serial3){ Serial2.print("xbee2 aint starting"); };
   Serial2.println("STARTING CONTAINER SOFTWARE");
   Serial1.println("past serial begin");
 
   if(DO_WRITE_TO_FLASH){
     Serial1.println("ABOUT TO READ INITIAL VARS FROM FLASH");
     altCorrection = altCorrectionFlash.read();
-    flightStage = flightStageFlash.read();
+
+    flightStageFromFlash = flightStageFlash.read();
+    if(flightStageFromFlash == 0){
+      flightStage = "rising";
+    }else if(flightStageFromFlash == 1){
+      flightStage = "falling";
+    }
+    
     Serial1.println("alt Correction");
     Serial1.println(altCorrection);
     Serial1.println("flight stage");
@@ -70,15 +75,15 @@ void setup() {
   dummy = sensors.getPressure();
   dummy = sensors.getTemp();
   dummy = sensors.getPressure();
-  
+
+  Serial2.println("Initialized Sensors");
   Serial1.println("past sensor init");
-  Serial1.println("Time, rotRateX, rotRateY, rotRateZ, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
+  Serial1.println("Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
   
   sensorDelayStart = millis();
   printDelayStart = millis();
   readDelayStart = millis();
   altCheckDelayStart = millis();
-  gpsDelayStart = millis();
   gpsDelayStart = millis();
 
   //delay(10000);
@@ -96,38 +101,26 @@ void loop() {
   if((currentTs - sensorDelayStart) > sensorDelayNum){
     //ACCUIRE ALL RAW SENSOR DATA AND ADD TO ARRAYS
     tem = sensors.getTemp();
-    //pres = sensors.getPressure();
-    pres = fakeData[x] / 100;
-    x++;
+    pres = sensors.getPressure();
+    //pres = fakeData[x] / 100;
+    //x++;
     bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
-    rawRotRateX[sampleIndex] = sensors.getRotRateX();
-    rawRotRateY[sampleIndex] = sensors.getRotRateY();
-    rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
 
     //PERFORM AVERAGING
     float totalAltitudes = 0;
     float totalVoltages = 0;
-    float totalRotRateX = 0;
-    float totalRotRateY = 0;
-    float totalRotRateZ = 0;
     for(int i = 0; i < 10; i++){
       totalAltitudes += bmpAltSamples[i];
       totalVoltages += voltageSamples[i];
-      totalRotRateX += rawRotRateX[i];
-      totalRotRateY += rawRotRateY[i];
-      totalRotRateZ += rawRotRateZ[i];
     }
     alt = totalAltitudes / 10;
     voltage = totalVoltages / 10;
-    rotRate[0] = totalRotRateX / 10;
-    rotRate[1] = totalRotRateY / 10;
-    rotRate[2] = totalRotRateZ / 10;
     
     //CALCULATE DELTA ALT
     previousAlt = currentAlt;
     currentAlt = alt;
-    if(!(currentAlt > 1000 && currentAlt < 0)){
+    if(!(currentAlt > (1000) || currentAlt < (0))){
       deltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
       previousAlts[deltaAltSampleIndex] = currentAlt;
     
@@ -148,7 +141,7 @@ void loop() {
       sampleIndex++;
     }
 
-    Serial1.println(String(millis()) + "," + String(openLogPacketCount) + "," + String(rotRate[0]) + "," + String(rotRate[1]) + "," + String(rotRate[2]) + "," + String(alt) + "," + String(tem) +
+    Serial1.println(String(millis()) + "," + String(openLogPacketCount) + "," + String(alt) + "," + String(tem) +
                   "," + String(voltage) + "," + gpsTime + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + 
                   String(gpsSats) + "," + String(flightStage) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     openLogPacketCount++;
@@ -168,7 +161,7 @@ void loop() {
   }
   
   
-  //INTERVAL TO PRINT TO SERIAL DEVICES
+  //INTERVAL TO PRINT TO XBEE
   if((currentTs - printDelayStart) > printDelayNum){
     printToXbee();
     printDelayStart = millis();
@@ -178,9 +171,6 @@ void loop() {
   if((currentTs - readDelayStart) > readDelayNum){
      recvWithStartEndMarkers();
      showNewData();
-     //delay(10);
-     recvWithStartEndMarkers2();
-     showNewData2();
      readDelayStart = millis();
    }
 
@@ -206,19 +196,29 @@ void altitudeCheck(){
   //calculate the average change in altitude of the past 10 delta altitudes 
   float total;
   float averageDeltaAlt;
+  float firstDeltaAltMin;
+  float secondDeltaAltMin;
+  int fs1ReqNum;
+  
+  firstDeltaAltMin = -1.0;
+  secondDeltaAltMin = -0.75;
+  fs1ReqNum = 5;
+
   for(int i = 0; i < 10; i++){
     total += deltaAlt[i];
   }
   averageDeltaAlt = total / 10;
+    
   openLogAverageDeltaAlt = averageDeltaAlt;
 
-  if(averageDeltaAlt < -1.0 && flightStage != 1 && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
+ if(averageDeltaAlt < firstDeltaAltMin && flightStage != "falling" && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
     Serial2.println("FS1reqCounter incremented");
     
-  }else if(averageDeltaAlt < -0.75 && flightStage != 1){ //has to be atleast -0.75 five times after it was initially -1.0
+  }else if(averageDeltaAlt < secondDeltaAltMin && flightStage != "falling"){ //has to be atleast -0.75 five times after it was initially -1.0
     FS1reqCounter++;
     Serial2.println("FS1reqCounter incremented");
+    
   }else{//so we did not meet the requirement consecutively and we have not transitioned yet
     if(FS1reqCounter != 0){
       FS1reqCounter = 0;
@@ -226,24 +226,24 @@ void altitudeCheck(){
     }
   }
 
-  if(FS1reqCounter >= 6){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
+  if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
     Serial2.println("transition to flight stage 1");
     Serial2.println(averageDeltaAlt);
     Serial1.println("transition to flight stage 1");
     Serial1.println(averageDeltaAlt);
     
-    flightStage = 1;
+    flightStage = "falling";
 
     if(DO_WRITE_TO_FLASH){
       Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
-      flightStageFlash.write(flightStage);
+      flightStageFlash.write(1);
     }
   }
 
   int shouldDeploy1 = 1;
   int shouldDeploy2 = 1;
   //if we are falling 
-  if(flightStage == 1){
+  if(flightStage == "falling"){
     
     for(int i = 0; i < 10; i++){
       if (!(previousAlts[i] <= (500 + altCorrection))){
@@ -253,25 +253,32 @@ void altitudeCheck(){
         shouldDeploy2 = 0;
       }
     }
+
+    if(shouldDeploy1){ //if it completed that for loop and shouldDeploy is still 1, increment the counter
+      deploySP1reqCounter++;
+    }else{ //if it did not meet the requirement, do not increment the counter
+      deploySP1reqCounter = 0;
+    }
+    if(shouldDeploy2){//if it completed that for loop and shouldDeploy is still 1, increment the counter
+      deploySP2reqCounter++;
+    }else{//if it did not meet the requirement, do not increment the counter
+      deploySP2reqCounter = 0;
+    }
     
-    if(shouldDeploy1 && sp1Released == "N"){
+    if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 2){
       Serial2.println("DEPLOY PAYLOAD 1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
-      sp1Released = "Y";
+      sp1Released = "R";
     }
-    if(shouldDeploy2 && sp2Released == "N"){
+    if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 2){
       Serial2.println("DEPLOY PAYLOAD 2");
-      Serial1.println("DEPLOY PAYLOAD 1");
+      Serial1.println("DEPLOY PAYLOAD 2");
       sensors.releaseServo2();
-      sp2Released = "Y";
+      sp2Released = "R";
     }
    
   }
-  /*Serial2.println("averageDeltaAlt");
-  Serial2.println(averageDeltaAlt);
-  Serial2.println("alt");
-  Serial2.println(alt);*/
   
 }
 
@@ -312,7 +319,7 @@ void showNewData() {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars;
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial2.println("CMD_2617_CX_PING");
+          Serial2.println("PING_RECIEVED");
           lastCommand = "PING";
           
         }else if(stringVersionReceivedChars == "CMD,2617,CX,RELEASE"){
@@ -328,9 +335,9 @@ void showNewData() {
           
           String sentAltCorrect = stringVersionReceivedChars.substring(29);
           altCorrection = sentAltCorrect.toInt();
+          lastCommand = "SETALTCORRECTION";
 
           if(DO_WRITE_TO_FLASH){
-            lastCommand = "SETALTCORRECTION";
             Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
             altCorrectionFlash.write(altCorrection);
           }
@@ -338,7 +345,7 @@ void showNewData() {
         }else if(stringVersionReceivedChars == "CMD,2617,CX,CLEARFLASH"){
           Serial2.println("received command to clear flash");
             altCorrection = 0;
-            flightStage = 0;
+            flightStage = "rising";
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
@@ -373,121 +380,3 @@ void showNewData() {
         newData = false;
     }
 }
-
-void recvWithStartEndMarkers2() {
-    static boolean recvInProgress2 = false;
-    static byte ndx = 0;
-    char startMarker = '<';
-    char endMarker = '>';
-    char rc;
-    
-    while (Serial3.available() > 0 && newData2 == false) {
-        rc = Serial3.read();
-
-        if (recvInProgress2 == true) {
-            if (rc != endMarker) {
-                receivedChars2[ndx] = rc;
-                ndx++;
-                if (ndx >= numChars2) {
-                    ndx = numChars2 - 1;
-                }
-            }
-            else {
-                receivedChars2[ndx] = '\0'; // terminate the string
-                recvInProgress2 = false;
-                ndx = 0;
-                newData2 = true;
-            }
-        }
-
-        else if (rc == startMarker) {
-            recvInProgress2 = true;
-        }
-    }
-}
-
-void showNewData2() {
-  if (newData2 == true) {
-        String stringVersionReceivedChars;
-        stringVersionReceivedChars = receivedChars2;
-        /*if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial2.println("CMD_2617_CX_PING");
-          lastCommand = "PING";          */
-        Serial2.println(stringVersionReceivedChars);
-        
-        newData2 = false;
-    }
-}
-
-/*
-void writePayloadXBee(String packet){
-
-  int packetLength = packet.length();
-
-  //calculate chexum, get packet in bytes
-  long chexum = 0x10 + 0x01 + 0x13 + 0xa2 + 0x41 + 0xba + 0x07 + 0x85 + 0xff + 0xfe;
-  byte buffer[packet.length() + 1];
-  packet.getBytes(buffer, packet.length() + 1);
-
-  // strings have extra 0 at end
-  for (int i=0; i < packet.length(); i++){
-      chexum += buffer[i];
-  }
-  
-  Serial3.write(0x7e); //Start delimiter
-  Serial3.write((byte)0x0); //Length
-  Serial3.write(packetLength + 14); //Length
-  Serial3.write(0x10); //Frame type
-  Serial3.write(0x01); //Frame ID
-  //64-bit address
-  Serial3.write((byte)0x0);
-  Serial3.write(0x13);
-  Serial3.write(0xa2);
-  Serial3.write((byte)0x0);
-  Serial3.write(0x41);
-  Serial3.write(0xba);
-  Serial3.write(0x07);
-  Serial3.write(0x85);
-  //16-bit address - reserved 
-  Serial3.write(0xff);
-  Serial3.write(0xfe);
-  Serial3.write((byte)0x0);//broadcast radius
-  Serial3.write((byte)0x0); //transmit options
-  //Data & Checksum
-   for (int i=0; i < packet.length(); i++){
-    Serial3.write(buffer[i]);
-   }
-  //Checksum
-  Serial3.write(0xff - (chexum & 0xff));
-}
-
-void readPayloadXBee(){
-  String incomingData = "";
-  
-  if (Serial3.available() >= 16){
-    //Serial2.println("serial 3 avail");
-    //while(Serial3.available() > 0){
-      //Serial2.println(String(Serial3.read()));
-    //}
-    
-    if(Serial3.read() == 0x7E){
-      for (int i = 1; i<15; i++){
-        byte discardByte = Serial3.read();
-      }
-      while(Serial3.available() > 0){
-        char dataIn = Serial3.read();
-        //if (dataIn == 0x7E){
-          //break;
-        //}
-        //else {
-          incomingData += dataIn; 
-        //}
-      }
-      incomingData.remove(incomingData.length()-1);
-    }
-  } 
-  if (incomingData != ""){
-    Serial2.println(incomingData);
-  }
-}
-*/

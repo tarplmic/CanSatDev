@@ -99,7 +99,7 @@ void setup() {
   dummy = sensors.getTemp();
   dummy = sensors.getPressure();
 
-  Serial2.println("Initialize Sensors");
+  Serial2.println("Initialized Sensors");
   
   Serial1.println("past sensor init");
   Serial1.println("Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
@@ -108,7 +108,6 @@ void setup() {
   printDelayStart = millis();
   readDelayStart = millis();
   altCheckDelayStart = millis();
-  gpsDelayStart = millis();
   gpsDelayStart = millis();
   simGotDataCheckStart = millis();
 
@@ -242,7 +241,7 @@ void loop() {
     gpsDelayStart = millis();
   }
   
-  //INTERVAL TO PRINT TO SERIAL DEVICES
+  //INTERVAL TO PRINT TO XBEE
   if((currentTs - printDelayStart) > printDelayNum){
     printToXbee();
     printDelayStart = millis();
@@ -462,7 +461,7 @@ void showNewData() {
         stringVersionReceivedChars = receivedChars;
         
         if(stringVersionReceivedChars == "CMD,2617,CX,PING"){
-          Serial2.println("CMD_2617_CX_PING");
+          Serial2.println("PING_RECIEVED");
           lastCommand = "PING";
           
         }else if(stringVersionReceivedChars == "CMD,2617,CX,RELEASE"){
