@@ -26,14 +26,14 @@ void Sensors::init()
     bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
     bmp.setIIRFilterCoeff(BMP3_IIR_FILTER_COEFF_3);
     
-    // if(!bno.begin())
-    // {
-    //     while(1){
-    //         digitalWrite(_pin, LOW);
-    //     };
-    // }
-    // delay(10);
-    // bno.setExtCrystalUse(true);
+    /*if(!bno.begin())
+    {
+        while(1){
+             digitalWrite(_pin, LOW);
+        };
+    }
+    delay(10);
+    bno.setExtCrystalUse(true);*/
 
     Wire.begin();
     if (myGPS.begin() == false)
@@ -180,9 +180,9 @@ float Sensors::getBattVoltage(){
 void Sensors::releaseServo1(){
     delay(100);
     myServo1.attach(15); //pin 15 arduino is pin 7 samd
-    myServo1.write(110);
-    delay(100);
-    myServo1.write(30);
+    //myServo1.write(110);
+    //delay(100);
+    myServo1.write(0);
     delay(1000);
     myServo1.detach();
 }
@@ -190,8 +190,8 @@ void Sensors::releaseServo1(){
 void Sensors::releaseServo2(){
     delay(100);
     myServo2.attach(9); //pin 9 arduino is pin 12 samd
-    myServo2.write(80);
-    delay(100);
+    //myServo2.write(80);
+    //delay(100);
     myServo2.write(0);
     delay(1000);
     myServo2.detach();
