@@ -9,6 +9,7 @@ from random import uniform, randint
 import serial
 import csv
 import paho.mqtt.client as mqtt
+from datetime import datetime
 
 #define global variables
 global containerColor
@@ -90,7 +91,7 @@ class xbeeDataThread(QThread):
         self.contPacketCount = 0
         self.sp1PacketCount = 0
         self.xbee = QtSerialPort.QSerialPort()
-        self.xbee.setPortName('COM8')
+        self.xbee.setPortName('COM3')
         self.xbee.setBaudRate(9600)
         self.line = ",,,,,,"
 
@@ -147,6 +148,8 @@ class xbeeDataThread(QThread):
                 serialLineArray3.append(self.line)
                 serialLine3 = serialLineArray3[0] + "\n" + serialLineArray3[1] + "\n" + serialLineArray3[2]
 
+                self.line = ",,,,,,"
+
             self.line = self.line.strip()
             self.line = self.line.split(',')
             if(len(self.line) >= 20):
@@ -192,9 +195,12 @@ class xbeeDataThread(QThread):
         containerAltY.append(float(line[7]))
         containerBattY = line[9]
         utcTimeY = line[10]
-        if(float(line[12]) >= -95 and float(line[12]) <= -70 and float(line[11]) >= 25 and float(line[11]) <= 40) :
-            latitude.append(float(line[11]))
-            longitude.append(float(line[12]))
+        try:
+            if(float(line[12]) >= -95 and float(line[12]) <= -70 and float(line[11]) >= 25 and float(line[11]) <= 40) :
+                latitude.append(float(line[11]))
+                longitude.append(float(line[12]))
+        except:
+            print("lat long out of range")
 
         with open('Flight_2617_C.csv','a',newline='') as fd:
             csvData = csv.writer(fd, delimiter=",")
@@ -345,7 +351,7 @@ class Display(QWidget):
         commandBox.setFixedSize(120, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
         #commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
-        commandBox.addItems(["CX_ON", "CX_OFF", "CX_PING", "SP1_ON", "SP1_OFF", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE"])
+        commandBox.addItems(["SET_TIME","CX_ON", "CX_OFF", "CX_PING", "SP1_ON", "SP1_OFF", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE", "STOP_BUZZER"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -358,7 +364,6 @@ class Display(QWidget):
         commandBoxesLayout.addWidget(sendButt)
         commandBoxes.setLayout(commandBoxesLayout)
         commandLayout.addWidget(commandBoxes)
-
 
         self.altCorrectInput = QLineEdit()
         self.altCorrectInput.returnPressed.connect(self.altCorrectEntered)
@@ -496,7 +501,9 @@ class Display(QWidget):
         self.mqttSimWid.setLayout(mqttSimLayout)
 
     def simButtonClicked(self):
+        global simIndex
         if self.simButt.isChecked():
+            simIndex = 0
             self.simButt.setStyleSheet('background-color:grey; color:white; border:3px solid; border-color:grey') 
             self.simButt.setText("Am sending SIMP")
 
@@ -512,14 +519,24 @@ class Display(QWidget):
             self.sendSimDataThread.start()
 
         else:
+            self.sendSimDataThread.quit()
             self.simButt.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey') 
             self.simButt.setText("Not sending SIMP")
+            simIndex = 0
     
     def sendSimDataFun(self):
         global simIndex
-        cmdToSend = simIndexArray[simIndex]
+
+        if(simIndex >= len(simIndexArray)):
+            cmdToSend = simIndexArray[len(simIndexArray) - 1]
+        else:
+            cmdToSend = simIndexArray[simIndex]
+        
         self.dataCollectionThread.xbee.write(cmdToSend.encode())
+
+        print(simIndex)
         simIndex += 1
+
 
 
     #creates title for the app
@@ -551,6 +568,13 @@ class Display(QWidget):
             print('About to send release command')
             dat = "<CMD,2617,CX,RELEASE>"
             self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SET_TIME"):
+            print('About to send st command')
+            rightnow = datetime.utcnow()
+            rightnow = str(rightnow).split(" ")[1][0:8]
+            dat = "<CMD,2617,ST," + rightnow + ">"
+            self.dataCollectionThread.xbee.write(dat.encode())
+
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "CLEAR_FLASH"):
             print('About to send clear flash command')
             dat = "<CMD,2617,CX,CLEARFLASH>"
@@ -582,6 +606,10 @@ class Display(QWidget):
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SP1_OFF"):
             print('About to send sp1_off')
             dat = "<CMD,2617,SP1X,OFF>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "STOP_BUZZER"):
+            print('About to send stop buzzer')
+            dat = "<CMD,2617,CX,STOP_BUZZER>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs

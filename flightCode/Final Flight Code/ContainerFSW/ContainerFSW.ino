@@ -269,7 +269,7 @@ void loop() {
 
 void printToXbee(){
   if(doSendData){
-    missionTime = timeFunctions.getTime();
+    missionTime = sensors.getMissionTime();
 
     altStr = String(alt);
     altStr = altStr.substring(0, altStr.length() - 1);
@@ -402,17 +402,37 @@ void altitudeCheck(){
       
    }
    
-   if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 2){
+   if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 1){
       Serial2.println("DEPLOY PAYLOAD 1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
       sp1Released = "R";
     }
-    if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 2){
+    if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 1){
       Serial2.println("DEPLOY PAYLOAD 2");
       Serial1.println("DEPLOY PAYLOAD 2");
       sensors.releaseServo2();
       sp2Released = "R";
+    }
+
+    //CHECK IF WE HAVE LANDED AFTER FALLING 
+    if(abs(averageDeltaAlt) <= 0.05 && alt < 50){
+      landedReqCounter++;
+    }else{
+      landedReqCounter = 0;
+    }
+    
+    if(landedReqCounter > 5 && buzzerIsOn == 0){ //if we meet requirements to say we've landed
+      //turn on buzzer
+      Serial2.println("TURN ON BUZZER!!!");
+      sensors.startBuzzer();
+      buzzerIsOn = 1;
+      doSendData = 0;
+      
+      if(DO_WRITE_TO_FLASH){
+        Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+        sendTelemFlash.write(doSendData);
+      }
     }
    
   }
@@ -471,6 +491,11 @@ void showNewData() {
           //activate servos to release
           sensors.releaseServo1();
           sensors.releaseServo2();
+          
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,STOP_BUZZER"){
+          lastCommand = "STOP_BUZZER";
+          sensors.stopBuzzer();
+          
 
         }else if(stringVersionReceivedChars.substring(0, 28) == "CMD,2617,CX,SETALTCORRECTION"){
           //Serial.println("alt command recieved");
@@ -484,6 +509,16 @@ void showNewData() {
             altCorrectionFlash.write(altCorrection);
           }
           
+        }else if(stringVersionReceivedChars.substring(0, 12) == "CMD,2617,ST,"){
+          lastCommand = "ST";
+          Serial.println("setting time");
+
+          int hour = stringVersionReceivedChars.substring(12, 14).toInt();
+          int minute = stringVersionReceivedChars.substring(15, 17).toInt();
+          int second = stringVersionReceivedChars.substring(18, 20).toInt();
+
+          sensors.setMissionTime(hour, minute, second);
+          
         }else if(stringVersionReceivedChars == "CMD,2617,CX,CLEARFLASH"){
           //Serial.println("received command to clear flash");
             altCorrection = 0;
@@ -491,6 +526,14 @@ void showNewData() {
             doSendData = 0;
             packetCount = 0;
             mode = "F";
+
+            FS1reqCounter = 0;
+            deploySP1reqCounter = 0;
+            deploySP2reqCounter = 0;
+            landedReqCounter = 0;
+
+            sensors.stopBuzzer();
+            
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
@@ -569,8 +612,10 @@ void showNewData() {
             currentAlt = 0;
             flightStage = "rising";
             altCorrection = 0;
+            FS1reqCounter = 0;
             deploySP1reqCounter = 0;
             deploySP2reqCounter = 0;
+            landedReqCounter = 0;
 
             if(DO_WRITE_TO_FLASH){
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
@@ -596,8 +641,10 @@ void showNewData() {
           simEnableRec = 0;
           flightStage = "rising";
           altCorrection = 0;
+          FS1reqCounter = 0;
           deploySP1reqCounter = 0;
           deploySP2reqCounter = 0;
+          landedReqCounter = 0;
 
           if(DO_WRITE_TO_FLASH){
               Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
@@ -664,7 +711,7 @@ void showNewData() {
               
             }
             
-            if(!(calculatedAlt > (1000) || calculatedAlt < (0))){
+            if(!(calculatedAlt > (1000) || calculatedAlt < (-20))){
               if(altMakesSense){
                 /*bmpAltSamples[simPresSampleIndex] = calculatedAlt;
 
@@ -740,7 +787,7 @@ void showNewData2() {
   String secondPart;
   String middlePart;
   String sendToGnd;
-  missionTime = timeFunctions.getTime();
+  missionTime = sensors.getMissionTime();
   if (newData2 == true) {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars2;
@@ -796,7 +843,7 @@ void showNewData3() {
   String middlePart;
   String sendToGnd;
   
-  missionTime = timeFunctions.getTime();
+  missionTime = sensors.getMissionTime();
   if (newData3 == true) {
         String stringVersionReceivedChars;
         stringVersionReceivedChars = receivedChars3;

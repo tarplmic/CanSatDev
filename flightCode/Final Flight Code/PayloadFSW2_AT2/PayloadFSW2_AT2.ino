@@ -67,7 +67,7 @@ void setup() {
   analogReference(AR_DEFAULT); //for thermistor
 
   //start bmp
-  if (!bmp.begin_I2C()) {
+  if (!bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {
     Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
     Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
     while (1);
