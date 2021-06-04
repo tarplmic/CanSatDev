@@ -6,6 +6,9 @@
 #include <Adafruit_BNO055.h>
 #include <SparkFun_u-blox_GNSS_Arduino_Library.h>
 #include <Servo.h>
+#include <Wire.h>
+#include <ds3231.h>
+#define DS3231_CONTROL_INTCN 0x4
 
 class Sensors
 {
@@ -35,9 +38,14 @@ class Sensors
     void releaseServo1();
     void releaseServo2();
     void stopCamera();
+    String getMissionTime();
+    void setMissionTime(int hour, int min, int sec);
+    void stopBuzzer();
+    void startBuzzer();
     float SEALEVELPRESSURE;
     unsigned char BATTERYSENSORPIN;
     int CAMERAPIN;
+    int BUZZERPIN;
   private:
     int _pin;
 };

@@ -10,6 +10,7 @@ Sensors::Sensors(int ledPin)
     SEALEVELPRESSURE = 1013.25;
     BATTERYSENSORPIN = A2;  //PB08, pin 8
     CAMERAPIN = 43; //pa02, pin 3
+    BUZZERPIN = 28; //pa24, pin 33
 }
 
 void Sensors::init()
@@ -36,6 +37,9 @@ void Sensors::init()
     bno.setExtCrystalUse(true);*/
 
     Wire.begin();
+    DS3231_init(DS3231_CONTROL_INTCN);
+
+    Wire.begin();
     if (myGPS.begin() == false)
     {
         //Serial.println(F("u-blox GNSS module not detected at default I2C address. Please check wiring. Freezing."));
@@ -47,9 +51,12 @@ void Sensors::init()
     analogReadResolution(12);
     analogReference(AR_DEFAULT);
 
-    digitalWrite(CAMERAPIN, HIGH);
-    delay(50);
-    digitalWrite(CAMERAPIN, LOW);
+    pinMode(BUZZERPIN, OUTPUT);
+    digitalWrite(BUZZERPIN, HIGH);
+
+    // digitalWrite(CAMERAPIN, HIGH);
+    // delay(50);
+    // digitalWrite(CAMERAPIN, LOW);
 }
 
 float Sensors::getPressure()
@@ -201,4 +208,35 @@ void Sensors::stopCamera(){
     digitalWrite(CAMERAPIN, HIGH);
     delay(50);
     digitalWrite(CAMERAPIN, LOW);
+}
+
+String Sensors::getMissionTime(){
+    struct ts t; 
+    String time = "";
+    DS3231_get(&t);
+    time += t.hour;
+    time += ":";
+    time += t.min;
+    time += ":";
+    time += t.sec;
+    return time;
+
+}
+
+void Sensors::setMissionTime(int hour, int min, int sec){
+    struct ts t; 
+    t.hour = hour; 
+    t.min = min;
+    t.sec = sec;
+ 
+    DS3231_set(t); 
+}
+
+void Sensors::stopBuzzer(){
+    digitalWrite(BUZZERPIN, HIGH);
+
+}
+
+void Sensors::startBuzzer(){
+    digitalWrite(BUZZERPIN, LOW);
 }

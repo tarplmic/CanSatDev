@@ -84,6 +84,8 @@ int deltaAltSampleIndex = 0;
 int FS1reqCounter = 0;
 int deploySP1reqCounter = 0;
 int deploySP2reqCounter = 0;
+int landedReqCounter = 0;
+int buzzerIsOn = 0;
 
 int sampleIndex = 0;
 int simPresSampleIndex = 0;
