@@ -32,7 +32,7 @@ int gpsDelayStart;
 
 
 //DEFINE FLASH VARIABLES 
-const int DO_WRITE_TO_FLASH = 0;
+const int DO_WRITE_TO_FLASH = 1;
 FlashStorage(flightStageFlash, int);
 FlashStorage(altCorrectionFlash, int);
 
@@ -104,7 +104,7 @@ void loop() {
     pres = sensors.getPressure();
     //pres = fakeData[x] / 100;
     //x++;
-    bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255)));
+    bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255))) - altCorrection;
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
 
     //PERFORM AVERAGING
@@ -130,8 +130,8 @@ void loop() {
         deltaAltSampleIndex++;
       }
     }else{
-      Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
-      Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
+      Serial2.println("THROWINGOUTALTITUDE:OUTOFRANGE:" + String(currentAlt));
+      Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE:" + String(currentAlt));
     }
 
     //INCREMENT DATS SAMPLE INDEX
@@ -159,7 +159,6 @@ void loop() {
     gpsDelayStart = millis();
 
   }
-  
   
   //INTERVAL TO PRINT TO XBEE
   if((currentTs - printDelayStart) > printDelayNum){
@@ -202,7 +201,7 @@ void altitudeCheck(){
   
   firstDeltaAltMin = -1.0;
   secondDeltaAltMin = -0.75;
-  fs1ReqNum = 5;
+  fs1ReqNum = 7;
 
   for(int i = 0; i < 10; i++){
     total += deltaAlt[i];
@@ -213,21 +212,21 @@ void altitudeCheck(){
 
  if(averageDeltaAlt < firstDeltaAltMin && flightStage != "falling" && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
-    Serial2.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounterincremented");
     
   }else if(averageDeltaAlt < secondDeltaAltMin && flightStage != "falling"){ //has to be atleast -0.75 five times after it was initially -1.0
     FS1reqCounter++;
-    Serial2.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounterincremented");
     
   }else{//so we did not meet the requirement consecutively and we have not transitioned yet
     if(FS1reqCounter != 0){
       FS1reqCounter = 0;
-      Serial2.println("FS1reqCounter reset to 0");
+      Serial2.println("FS1reqCounterresetto0");
     }
   }
 
   if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
-    Serial2.println("transition to flight stage 1");
+    Serial2.println("transition_to_flight_stage_1");
     Serial2.println(averageDeltaAlt);
     Serial1.println("transition to flight stage 1");
     Serial1.println(averageDeltaAlt);
@@ -235,7 +234,7 @@ void altitudeCheck(){
     flightStage = "falling";
 
     if(DO_WRITE_TO_FLASH){
-      Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
+      Serial2.println("WARNING:ABOUTTOWRITETOFLASH:FLIGHTSTAGE");
       flightStageFlash.write(1);
     }
   }
@@ -246,10 +245,10 @@ void altitudeCheck(){
   if(flightStage == "falling"){
     
     for(int i = 0; i < 10; i++){
-      if (!(previousAlts[i] <= (500 + altCorrection))){
+      if (!(previousAlts[i] <= (515))){
         shouldDeploy1 = 0;
       }
-      if(!(previousAlts[i] <= (400 + altCorrection))){
+      if(!(previousAlts[i] <= (415))){
         shouldDeploy2 = 0;
       }
     }
@@ -266,16 +265,35 @@ void altitudeCheck(){
     }
     
     if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 2){
-      Serial2.println("DEPLOY PAYLOAD 1");
+      Serial2.println("DEPLOYPAYLOAD1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
       sp1Released = "R";
     }
     if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 2){
-      Serial2.println("DEPLOY PAYLOAD 2");
+      Serial2.println("DEPLOYPAYLOAD2");
       Serial1.println("DEPLOY PAYLOAD 2");
       sensors.releaseServo2();
       sp2Released = "R";
+    }
+
+    //CHECK IF WE HAVE LANDED AFTER FALLING 
+    if(abs(averageDeltaAlt) <= 0.14 && alt < 50){
+      Serial2.println("landedIncremented");
+      landedReqCounter++;
+    }else{
+      if(landedReqCounter != 0){
+        Serial2.println("landedReset");
+        landedReqCounter = 0;
+      }
+    }
+    
+    if(landedReqCounter > 2 && buzzerIsOn == 0){ //if we meet requirements to say we've landed
+      //turn on buzzer
+      Serial2.println("TURN ON BUZZER!!!");
+      sensors.startBuzzer();
+      buzzerIsOn = 1;
+      
     }
    
   }
@@ -331,31 +349,51 @@ void showNewData() {
           sensors.releaseServo2();
 
         }else if(stringVersionReceivedChars.substring(0, 28) == "CMD,2617,CX,SETALTCORRECTION"){
-          Serial2.println("alt command recieved");
+          Serial2.println("altcommandrecieved");
           
           String sentAltCorrect = stringVersionReceivedChars.substring(29);
           altCorrection = sentAltCorrect.toInt();
           lastCommand = "SETALTCORRECTION";
 
           if(DO_WRITE_TO_FLASH){
-            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
+            Serial2.println("WARNING:ABOUTTOWRITETOFLASH:ALTCORRECTION");
             altCorrectionFlash.write(altCorrection);
           }
           
-        }else if(stringVersionReceivedChars == "CMD,2617,CX,CLEARFLASH"){
-          Serial2.println("received command to clear flash");
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,START_BUZZER"){
+          lastCommand = "START_BUZZER";
+          sensors.startBuzzer();
+          
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,STOP_BUZZER"){
+          lastCommand = "STOP_BUZZER";
+          sensors.stopBuzzer();
+          
+         }else if(stringVersionReceivedChars == "CMD,2617,CX,CLEARFLASH"){
+          Serial2.println("receivedcommandtoclearflash");
             altCorrection = 0;
             flightStage = "rising";
+            FS1reqCounter = 0;
+            deploySP1reqCounter = 0;
+            deploySP2reqCounter = 0;
+            landedReqCounter = 0;
+            packetCount = 0;
+            buzzerIsOn = 0;
+            
+            sp1Released = "N";
+            sp2Released = "N";
+            
+            sensors.stopBuzzer();
+            
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
-              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
               flightStageFlash.write(0);
               altCorrectionFlash.write(0);
             }
               
         }else if(stringVersionReceivedChars == "CMD,2617,CX,ON"){
-              Serial2.println("recieved on command");
+              Serial2.println("recievedoncommand");
               lastCommand = "CXON";
               doSendData = 1;
               

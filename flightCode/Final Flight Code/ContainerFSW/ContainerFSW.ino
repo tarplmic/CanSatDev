@@ -354,7 +354,7 @@ void altitudeCheck(){
     flightStage = "falling";
 
     if(DO_WRITE_TO_FLASH){
-      Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: FLIGHT STAGE");
+      Serial2.println("WARNING:ABOUTTOWRITETOFLASH:FLIGHTSTAGE");
       flightStageFlash.write(1);
     }
   }
@@ -365,10 +365,10 @@ void altitudeCheck(){
   if(flightStage == "falling"){
     if(mode == "F"){
       for(int i = 0; i < 10; i++){
-        if (!(previousAlts[i] <= (500))){
+        if (!(previousAlts[i] <= (515))){
           shouldDeploy1 = 0;
         }
-        if(!(previousAlts[i] <= (400))){
+        if(!(previousAlts[i] <= (415))){
           shouldDeploy2 = 0;
         }
       }
@@ -384,7 +384,7 @@ void altitudeCheck(){
       }
     
    }else{//if we are in sim mode
-    if (!(alt <= 500 && previousAlt <= 500)){ //if the previous alt and current are not both under 500, do not deploy, reset req counter
+    if (!(alt <= 515 && previousAlt <= 515)){ //if the previous alt and current are not both under 500, do not deploy, reset req counter
       shouldDeploy1 = 0;
       deploySP1reqCounter = 0;
       
@@ -392,7 +392,7 @@ void altitudeCheck(){
       deploySP1reqCounter++;
     }
     
-    if(!(alt <= 400 && previousAlt <= 400)){//if the previous alt and current are not both under 400, do not deploy, reset req counter
+    if(!(alt <= 415 && previousAlt <= 415)){//if the previous alt and current are not both under 400, do not deploy, reset req counter
       shouldDeploy2 = 0;
       deploySP2reqCounter = 0;
       
@@ -430,7 +430,7 @@ void altitudeCheck(){
       doSendData = 0;
       
       if(DO_WRITE_TO_FLASH){
-        Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+        Serial2.println("WARNING:ABOUTTOWRITETOFLASH:doSendTelem");
         sendTelemFlash.write(doSendData);
       }
     }
@@ -505,7 +505,7 @@ void showNewData() {
           lastCommand = "SETALTCORRECTION";
 
           if(DO_WRITE_TO_FLASH){
-            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
+            Serial2.println("WARNING:ABOUTTOWRITETOFLASH:ALTCORRECTION");
             altCorrectionFlash.write(altCorrection);
           }
           
@@ -532,11 +532,14 @@ void showNewData() {
             deploySP2reqCounter = 0;
             landedReqCounter = 0;
 
+            /*sp1Released = "N";
+            sp2Released = "N";*/
+
             sensors.stopBuzzer();
             
             if(DO_WRITE_TO_FLASH){
               lastCommand = "CLEARFLASH";
-              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
               flightStageFlash.write(0);
               altCorrectionFlash.write(0);
@@ -550,7 +553,7 @@ void showNewData() {
               lastCommand = "CXON";
               doSendData = 1;
               if(DO_WRITE_TO_FLASH){
-                Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+                Serial2.println("WARNING:ABOUTTOWRITETOFLASH:doSendTelem");
                 sendTelemFlash.write(doSendData);
               }
               
@@ -560,7 +563,7 @@ void showNewData() {
           doSendData = 0;
 
           if(DO_WRITE_TO_FLASH){
-            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: doSendTelem");
+            Serial2.println("WARNING:ABOUTTOWRITETOFLASH:doSendTelem");
             sendTelemFlash.write(doSendData);
           }
         }else if (stringVersionReceivedChars == "CMD,2617,SP1X,ON"){
@@ -600,7 +603,7 @@ void showNewData() {
         }else if(stringVersionReceivedChars == "CMD,2617,SIM,ACTIVATE"){
           //Serial.println("recieved sim activate command");
           if(simEnableRec){
-            Serial2.println("SWITCH TO SIMULATION MODE");
+            Serial2.println("SWITCHTOSIMULATIONMODE");
             mode = "S";
 
             lastCommand = "SIM_ACTIVATE";
@@ -618,7 +621,7 @@ void showNewData() {
             landedReqCounter = 0;
 
             if(DO_WRITE_TO_FLASH){
-              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
               flightStageFlash.write(0);
               altCorrectionFlash.write(0);
@@ -631,7 +634,7 @@ void showNewData() {
           //Serial.println("recieved sim disable command");
           mode = "F";
           if(DO_WRITE_TO_FLASH){
-            Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: flightModeFlash");
+            Serial2.println("WARNING:ABOUTTOWRITETOFLASH:flightModeFlash");
             flightModeFlash.write(0);
           }
           memset(bmpAltSamples, 0, sizeof(bmpAltSamples));
@@ -647,7 +650,7 @@ void showNewData() {
           landedReqCounter = 0;
 
           if(DO_WRITE_TO_FLASH){
-              Serial2.println("WARNING: ABOUT TO RESET FLASH VALUES");
+              Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
               flightStageFlash.write(0);
               altCorrectionFlash.write(0);
@@ -676,7 +679,7 @@ void showNewData() {
             }else{
               altCorrection = calculatedAlt;
               if(DO_WRITE_TO_FLASH){
-                Serial2.println("WARNING: ABOUT TO WRITE TO FLASH: ALT CORRECTION");
+                Serial2.println("WARNING:ABOUTTOWRITETOFLASH:ALTCORRECTION");
                 altCorrectionFlash.write(altCorrection);
               }
             }
