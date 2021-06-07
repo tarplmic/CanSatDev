@@ -59,7 +59,7 @@ void setup() {
   Serial.begin(9600); 
   while (!Serial){ Serial1.print("xbee aint starting"); };
   Serial.println("start test");
-  Serial2.println("STARTING CONTAINER SOFTWARE");
+  Serial2.println("STARTINGCONTAINERSOFTWARE");
   Serial1.println("past serial begin");
 
   if(DO_WRITE_TO_FLASH){
@@ -83,9 +83,9 @@ void setup() {
     packetCount = packetCountFlash.read();
     doSendData = sendTelemFlash.read();
     
-    Serial2.println("alt Correction");
+    Serial2.println("altCorrection");
     Serial2.println(altCorrection);
-    Serial2.println("flight stage");
+    Serial2.println("flightstage");
     Serial2.println(flightStage);
     Serial2.println("packetCount");
     Serial2.println(packetCount);
@@ -99,7 +99,7 @@ void setup() {
   dummy = sensors.getTemp();
   dummy = sensors.getPressure();
 
-  Serial2.println("Initialized Sensors");
+  Serial2.println("InitializedSensors");
   
   Serial1.println("past sensor init");
   Serial1.println("Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection");
@@ -110,9 +110,6 @@ void setup() {
   altCheckDelayStart = millis();
   gpsDelayStart = millis();
   simGotDataCheckStart = millis();
-
-  //delay(10000);
-  //sensors.stopCamera();
   
 }
 
@@ -130,7 +127,6 @@ void loop() {
       pres = sensors.getPressure();
       //pres = fakeData[x] / 100;
       //x++;
-      //Serial.println(44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255))));
       bmpAltSamples[sampleIndex] = 44330*(1 - pow((pres/SEALEVELPRESSURE_HPA), (1/5.255))) - altCorrection;
 
       if(altDivisor < 10){
@@ -140,9 +136,6 @@ void loop() {
 
     tem = sensors.getTemp();
     voltageSamples[sampleIndex] = sensors.getBattVoltage();
-    //rawRotRateX[sampleIndex] = sensors.getRotRateX();
-    //rawRotRateY[sampleIndex] = sensors.getRotRateY();
-    //rawRotRateZ[sampleIndex] = sensors.getRotRateZ();
     accx = sensors.getAccX();
     accy = sensors.getAccY();
     accz = sensors.getAccZ();
@@ -156,17 +149,11 @@ void loop() {
     for(int i = 0; i < 10; i++){
       totalAltitudes += bmpAltSamples[i];
       totalVoltages += voltageSamples[i];
-      //totalRotRateX += rawRotRateX[i];
-      //totalRotRateY += rawRotRateY[i];
-      //totalRotRateZ += rawRotRateZ[i];
     }
     if(mode == "F"){
       alt = totalAltitudes / altDivisor;
     }
     voltage = totalVoltages / 10;
-    //rotRate[0] = totalRotRateX / 10;
-    //rotRate[1] = totalRotRateY / 10;
-    //rotRate[2] = totalRotRateZ / 10;
     
     //CALCULATE DELTA ALT HERE IF IN FLIGHT MODE
     if(mode == "F"){
@@ -182,7 +169,7 @@ void loop() {
           deltaAltSampleIndex++;
         }
       }else{
-        Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
+        Serial2.println("THROWINGOUTALTITUDE:OUTOFRANGE:" + String(currentAlt));
         Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
       }
     }
@@ -332,23 +319,23 @@ void altitudeCheck(){
 
   if(averageDeltaAlt < firstDeltaAltMin && flightStage != "falling" && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
-    Serial2.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounterincremented");
     
   }else if(averageDeltaAlt < secondDeltaAltMin && flightStage != "falling"){ //has to be atleast -0.75 five times after it was initially -1.0
     FS1reqCounter++;
-    Serial2.println("FS1reqCounter incremented");
+    Serial2.println("FS1reqCounterincremented");
     
   }else{//so we did not meet the requirement consecutively and we have not transitioned yet
     if(FS1reqCounter != 0){
       FS1reqCounter = 0;
-      Serial2.println("FS1reqCounter reset to 0");
+      Serial2.println("FS1reqCounterresetto0");
     }
   }
 
   if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
-    Serial2.println("transition to flight stage 1");
+    Serial2.println("transitiontoflightstage1");
     Serial2.println(averageDeltaAlt);
-    Serial1.println("transition to flight stage 1");
+    Serial1.println("transitiontoflightstage1");
     Serial1.println(averageDeltaAlt);
     
     flightStage = "falling";
@@ -403,28 +390,33 @@ void altitudeCheck(){
    }
    
    if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 1){
-      Serial2.println("DEPLOY PAYLOAD 1");
+      Serial2.println("DEPLOYPAYLOAD1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
       sp1Released = "R";
     }
+    
     if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 1){
-      Serial2.println("DEPLOY PAYLOAD 2");
+      Serial2.println("DEPLOYPAYLOAD2");
       Serial1.println("DEPLOY PAYLOAD 2");
       sensors.releaseServo2();
       sp2Released = "R";
     }
 
     //CHECK IF WE HAVE LANDED AFTER FALLING 
-    if(abs(averageDeltaAlt) <= 0.05 && alt < 50){
+    if(abs(averageDeltaAlt) <= 0.14 && alt < 50){
+      Serial2.println("landedIncremented");
       landedReqCounter++;
     }else{
-      landedReqCounter = 0;
+      if(landedReqCounter != 0){
+        Serial2.println("landedReset");
+        landedReqCounter = 0;
+      }
     }
     
-    if(landedReqCounter > 5 && buzzerIsOn == 0){ //if we meet requirements to say we've landed
+    if(landedReqCounter > 2 && buzzerIsOn == 0){ //if we meet requirements to say we've landed
       //turn on buzzer
-      Serial2.println("TURN ON BUZZER!!!");
+      Serial2.println("TURNONBUZZER!!!");
       sensors.startBuzzer();
       buzzerIsOn = 1;
       doSendData = 0;
@@ -492,11 +484,14 @@ void showNewData() {
           sensors.releaseServo1();
           sensors.releaseServo2();
           
+        }else if(stringVersionReceivedChars == "CMD,2617,CX,START_BUZZER"){
+          lastCommand = "START_BUZZER";
+          sensors.startBuzzer();
+          
         }else if(stringVersionReceivedChars == "CMD,2617,CX,STOP_BUZZER"){
           lastCommand = "STOP_BUZZER";
           sensors.stopBuzzer();
           
-
         }else if(stringVersionReceivedChars.substring(0, 28) == "CMD,2617,CX,SETALTCORRECTION"){
           //Serial.println("alt command recieved");
           

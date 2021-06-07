@@ -52,7 +52,7 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
 
-  Serial1.begin(9600);
+  Serial1.begin(115200);
   while(!Serial1);
   
   Serial1.println("OpenLog started");
@@ -61,23 +61,23 @@ void setup() {
   while (!Serial2){
     Serial1.println("XBee not starting");
   };
-  
+
   Serial2.println("TESTTT");
   
   analogReference(AR_DEFAULT); //for thermistor
 
   //start bmp
+  /*if (!bmp.begin_I2C()) {
+    Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
+    Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
+    while (1);
+  }*/
+
   if (!bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {
     Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
     Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
     while (1);
   }
-
-  /*if (!bmp.begin_SPI(BMP_CS, BMP_SCK, BMP_MISO, BMP_MOSI)) {
-    Serial1.println("Could not find a valid BMP3 sensor, check wiring!");
-    Serial2.println("Could not find a valid BMP3 sensor, check wiring!");
-    while (1);
-  }*/
   
   bmp.setTemperatureOversampling(BMP3_OVERSAMPLING_8X);
   bmp.setPressureOversampling(BMP3_OVERSAMPLING_4X);
@@ -110,17 +110,7 @@ void loop() {
 
     /*READ XBEE*/
     if((currentTs - readDelayStart) > readDelayNum){
-     /*command = readXBee();
-     if (command == "CMD,2617,SP1X,ON"){
-        sendTelem = true;
-        Serial2.println("RECIEVEED SP1X ON");
-     }else if (command == "CMD,2617,SP1X,OFF"){
-        sendTelem = false;
-        Serial2.println(sendTelem);
-        Serial2.println("RECIEVEED SP1X OFF");
-        readDelayStart = millis();
-     }
-     */
+     
      recvWithStartEndMarkers();
      showNewData();
      readDelayStart = millis();
@@ -171,6 +161,7 @@ void loop() {
         float rotation_zSum = 0;
         float thermSum = 0;
         float presAvg = 0;
+        float resistanceAvg = 0;
         
         for (int i=0; i < NUMSAMPLES; i++) {
            presSum += bmpSamples[i];
@@ -186,7 +177,7 @@ void loop() {
         //CALCULATE DELTA ALT
         previousAlt = currentAlt;
         currentAlt = alt;
-        if(!(currentAlt > 1000 || currentAlt < 0)){
+        if(!(currentAlt > 1000 || currentAlt < -30)){
           deltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
           previousAlts[deltaAltSampleIndex] = currentAlt;
         
@@ -196,17 +187,17 @@ void loop() {
             deltaAltSampleIndex++;
           }
         }else{
-          Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
+          //Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
           Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
         }
         
         rotation_x = rotation_xSum/NUMSAMPLES;
         rotation_y = rotation_ySum/NUMSAMPLES;
         rotation_z = rotation_zSum/NUMSAMPLES;
-        adcReading = thermSum/NUMSAMPLES;
+        resistanceAvg = thermSum/NUMSAMPLES;
   
         // convert the value to resistance
-        resistanceAvg = 1023 / (adcReading - 1);
+        resistanceAvg = 1023 / resistanceAvg - 1;
         resistanceAvg = SERIESRESISTOR / resistanceAvg;
           
         // calculate temperature from resistance
@@ -219,7 +210,7 @@ void loop() {
         thermTempStr.remove(thermTempStr.length() - 1);
         
         /*CREATE AND PRINT PACKET*/
-        String packet = openLogPacket(missionTime, alt, String(thermTempStr), rotation_x, rotation_y, rotation_z, openLogAverageDeltaAlt);
+        String packet = openLogPacket(missionTime, alt, thermTempStr, rotation_x, rotation_y, rotation_z, openLogAverageDeltaAlt);
         writeSD(packet);
         
         /*RESET PRINT TIMER*/
@@ -234,23 +225,26 @@ void loop() {
 
     /*SEND PACKET*/
     if((currentTs - sendDelayStart >= sendDelayNum) && sendTelem == true){
-      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, String(bmpTemperature), rotation_z, openLogAverageDeltaAlt);
+      //Calculate rotation perp to rotor
+      totalRotation = sqrt(sq(rotation_x) + sq(rotation_y) + sq(rotation_z));
+      
+      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, thermTempStr, totalRotation, openLogAverageDeltaAlt);
       writeXBee(XBEEWrite);  
       sendDelayStart = millis();
     }
 
 }
 
-String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, float alt, String thermTemp, float rotationZ, float avgDeltaAlt){
+String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, float alt, String thermTemp, float rotation, float avgDeltaAlt){
   
-    unsigned long runMillis= millis();
+    /*unsigned long runMillis= millis();
     unsigned long allSeconds=millis()/1000;
     int runHours= allSeconds/3600;
     int secsRemaining=allSeconds%3600;
     int runMinutes=secsRemaining/60;
-    int runSeconds=secsRemaining%60;
+    int runSeconds=secsRemaining%60;*/
     
-    missionTime = String(runHours) + ":" + String(runMinutes) + ":" + String(runSeconds);
+    //missionTime = String(runHours) + ":" + String(runMinutes) + ":" + String(runSeconds);
     
     packetCount += 1;
     
@@ -258,7 +252,7 @@ String xbeePacket(const int teamID, String missionTime, int &packetCount, String
     altStr = altStr.substring(0, altStr.length() - 1);
     temStr = String(thermTemp);
     
-    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + altStr + "," + temStr + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
+    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + altStr + "," + temStr + "," + String(rotation) + "," + String(avgDeltaAlt) + ">"; 
 
     return message;
 }

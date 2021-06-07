@@ -42,6 +42,7 @@ class Sensors
     void setMissionTime(int hour, int min, int sec);
     void stopBuzzer();
     void startBuzzer();
+    //int subtractTime(String firstTime, String secondTime);
     float SEALEVELPRESSURE;
     unsigned char BATTERYSENSORPIN;
     int CAMERAPIN;

@@ -13,11 +13,11 @@ from datetime import datetime
 
 #define global variables
 global containerColor
-containerColor = (255, 0, 0)
+containerColor = (130, 0, 50)
 global sp1Color 
-sp1Color = (0, 255, 0)
+sp1Color = (255, 120, 50)
 global sp2Color 
-sp2Color = (0, 0, 255)
+sp2Color = (0, 0, 200)
 global graphBackground 
 graphBackground = (255, 255, 255)
 global entireBackground 
@@ -30,6 +30,14 @@ global SP1GraphsX
 SP1GraphsX = [0]
 global SP1AltY
 SP1AltY = [0]
+global SP1RotY
+SP1RotY = [0]
+global SP2GraphsX
+SP2GraphsX = [0]
+global SP2AltY
+SP2AltY = [0]
+global SP2RotY
+SP2RotY = [0]
 global contGraphsX
 contGraphsX = [0]
 global containerAltY
@@ -42,12 +50,20 @@ global longitude
 longitude = [-86]
 global utcTimeY
 utcTimeY = "00:00:00"
+global sp1Temp 
+sp1Temp = "0"
+global sp2Temp
+sp2Temp = "0"
+global contTemp 
+contTemp = "0"
 global serialLine
 serialLine = "blank" + "\n" + "blank" + "\n" + "blank" + "\n" + "blank"
 global serialLine2
 serialLine2 = "blank" + "\n" + "blank" + "\n" + "blank"
 global serialLine3
 serialLine3 = "blank" + "\n" + "blank" + "\n" + "blank"
+global serialLine4
+serialLine4 = "blank" + "\n" + "blank" + "\n" + "blank"
 
 global simIndex 
 simIndex = 0
@@ -55,7 +71,7 @@ global simIndexArray
 simIndexArray = []
 
 ###MQTT SETUP###
-# Define event callbacks
+#Define event callbacks
 def on_connect(client, userdata, flags, rc):
     print("rc: " + str(rc))
 def on_message(client, obj, msg):
@@ -82,7 +98,6 @@ mqttc.username_pw_set("t1010", "t1010pass") # made up username and password
 mqttc.connect("cansat.info", 1883)
 ###MQTT SETUP###
 
-
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
     def __init__(self):
@@ -90,8 +105,9 @@ class xbeeDataThread(QThread):
 
         self.contPacketCount = 0
         self.sp1PacketCount = 0
+        self.sp2PacketCount = 0
         self.xbee = QtSerialPort.QSerialPort()
-        self.xbee.setPortName('COM3')
+        self.xbee.setPortName('COM5')
         self.xbee.setBaudRate(9600)
         self.line = ",,,,,,"
 
@@ -106,6 +122,7 @@ class xbeeDataThread(QThread):
         global serialLine
         global serialLine2
         global serialLine3
+        global serialLine4
 
         while(self.xbee.canReadLine()):
             newData = self.xbee.readLine()
@@ -113,79 +130,132 @@ class xbeeDataThread(QThread):
             self.line += newData
         
         if(self.line != ""):
+
+            self.line = self.line.split("\r\n")
             print(self.line)
-            if(self.line.split(',')[3] == "C"):
-                #PUBLISH TO MQTT
-                # mqttDat = self.line.strip().split(',')
-                # mqttDat.pop()
-                # mqttDat.pop()
-                # mqttDatStr = ""
-                # for i in range(len(mqttDat)):
-                #     if(i != len(mqttDat) - 1):
-                #         mqttDatStr += str(mqttDat[i]) + ","
-                #     else:
-                #         mqttDatStr += str(mqttDat[i])
 
-                #print(mqttDatStr)
-                mqttc.publish(topic, self.line.strip()) 
-                #PUBLISH TO MQTT
-
-                serialLineArray = serialLine.split()
-                serialLineArray.pop(0)
-                serialLineArray.append(self.line)
-                serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2] + "\n" + serialLineArray[3]
-            elif(self.line.split(',')[3] == "SP1" or self.line.split(',')[3] == "SP2"):
-                #print(self.line.strip())
-                mqttc.publish(topic, self.line.strip()) 
-                
-                serialLineArray2 = serialLine2.split()
-                serialLineArray2.pop(0)
-                serialLineArray2.append(self.line)
-                serialLine2 = serialLineArray2[0] + "\n" + serialLineArray2[1] + "\n" + serialLineArray2[2]
-            else:
-                serialLineArray3 = serialLine3.split()
-                serialLineArray3.pop(0)
-                serialLineArray3.append(self.line)
-                serialLine3 = serialLineArray3[0] + "\n" + serialLineArray3[1] + "\n" + serialLineArray3[2]
-
-                self.line = ",,,,,,"
-
-            self.line = self.line.strip()
-            self.line = self.line.split(',')
-            if(len(self.line) >= 20):
-                if(self.line[3] == "C"):
-                #parse through and update variable arrays 
-                    self.parseContainerData(self.line)
-            elif(len(self.line) >= 7):    
-                if(self.line[3] == "SP1"):
-                    print("WE GOT PAYLOAD  1 DATA")
-                    print(self.line)
-                    self.parseSP1Data(self.line)
             for x in range(len(self.line)):
-                if(x == "PING_RECIEVED"):
-                    print("WE GOT PING RECIEVED")
-            #else:
-                #print("not container data or ping received")
+                print(self.line[x])
+
+                if(len(self.line[x].split(',')) > 3):
+                    if(self.line[x].split(',')[3] == "C"):
+                        #PUBLISH TO MQTT
+                        mqttc.publish(topic, self.line[x].strip()) 
+                        #PUBLISH TO MQTT
+
+                        serialLineArray = serialLine.split()
+                        serialLineArray.pop(0)
+                        serialLineArray.append(self.line[x])
+                        serialLine = serialLineArray[0] + "\n" + serialLineArray[1] + "\n" + serialLineArray[2] + "\n" + serialLineArray[3]
+                    elif(self.line[x].split(',')[3] == "SP1"):
+                        #print(self.line.strip())
+                        mqttc.publish(topic, self.line[x].strip()) 
+                        
+                        serialLineArray2 = serialLine2.split()
+                        serialLineArray2.pop(0)
+                        serialLineArray2.append(self.line[x])
+                        serialLine2 = serialLineArray2[0] + "\n" + serialLineArray2[1] + "\n" + serialLineArray2[2]
+                    elif(self.line[x].split(',')[3] == "SP2"):
+                        #print(self.line[x].strip())
+                        mqttc.publish(topic, self.line[x].strip()) 
+                        
+                        serialLineArray3 = serialLine3.split()
+                        serialLineArray3.pop(0)
+                        serialLineArray3.append(self.line[x])
+                        serialLine3 = serialLineArray3[0] + "\n" + serialLineArray3[1] + "\n" + serialLineArray3[2]
+
+                    self.line[x] = self.line[x].strip()
+                    self.line[x] = self.line[x].split(',')
+                    if(len(self.line[x]) >= 20):
+                        if(self.line[x][3] == "C"):
+                        #parse through and update variable arrays 
+                            self.parseContainerData(self.line[x])
+                    elif(len(self.line[x]) >= 7):    
+
+                        if(self.line[x][3] == "SP1"):
+                            self.parseSP1Data(self.line[x])
+
+                        elif(self.line[x][3] == "SP2"):
+                            self.parseSP2Data(self.line[x])
+
+                    for x in range(len(self.line[x])):
+                        if(x == "PING_RECIEVED"):
+                            print("WE GOT PING RECIEVED")
+                    #else:
+                        #print("not container data or ping received")
+                
+                else:
+                        serialLineArray4 = serialLine4.split()
+                        if(self.line[x] != ""):
+                            serialLineArray4.pop(0)
+                            serialLineArray4.append(self.line[x])
+                        serialLine4 = serialLineArray4[0] + "\n" + serialLineArray4[1] + "\n" + serialLineArray4[2]
+
+                        self.line[x] = ",,,,,,"
 
         self.line = ""
 
     def parseSP1Data(self, line):
+        global sp1Temp
 
         #line = line.split(',')
         self.sp1PacketCount += 1
         if self.sp1PacketCount > graphFrameLimit:
             SP1GraphsX.pop(0)
             SP1AltY.pop(0)
-        SP1GraphsX.append(self.sp1PacketCount)
-        SP1AltY.append(float(line[4]))
+            SP1RotY.pop(0)
+        try:
+            SP1GraphsX.append(self.sp1PacketCount)
+            SP1AltY.append(float(line[4]))
+            SP1RotY.append(float(line[6]))
+        except:
+            SP1GraphsX.pop(len(SP1GraphsX) - 1)
+            SP1AltY.pop(len(SP1AltY) - 1)
+            SP1RotY.pop(len(SP1RotY) - 1)
+            print(len(SP1GraphsX))
+            print(len(SP1RotY))
+            print(len(SP1AltY))
+            print("BAD SP1 DATA")
+        
+        sp1Temp = line[5]
 
         with open('Flight_2617_SP1.csv','a',newline='') as fd:
+            csvData = csv.writer(fd, delimiter=",")
+            csvData.writerow(line)
+            
+    def parseSP2Data(self, line):
+        global sp2Temp
+
+        #line = line.split(',')
+        self.sp2PacketCount += 1
+        if self.sp2PacketCount > graphFrameLimit:
+            SP2GraphsX.pop(0)
+            SP2AltY.pop(0)
+            SP2RotY.pop(0)
+
+        try:
+            SP2GraphsX.append(self.sp2PacketCount)
+            SP2AltY.append(float(line[4]))
+            SP2RotY.append(float(line[6]))
+        except:
+            SP2GraphsX.pop(len(SP2GraphsX) - 1)
+            SP2AltY.pop(len(SP2AltY) - 1)
+            SP2RotY.pop(len(SP2RotY) - 1)
+            print(len(SP2GraphsX))
+            print(len(SP2RotY))
+            print(len(SP2AltY))
+            print("BAD SP2 DATA")
+        
+        sp2Temp = line[5]
+
+        with open('Flight_2617_SP2.csv','a',newline='') as fd:
             csvData = csv.writer(fd, delimiter=",")
             csvData.writerow(line)
 
     def parseContainerData(self, line):
         global containerBattY #have to include global because I am redefining containerBattY every time (for the arrays, I am just appending, not redefining)
         global utcTimeY
+        global contTemp
 
         self.contPacketCount += 1
         if self.contPacketCount > graphFrameLimit:
@@ -194,7 +264,8 @@ class xbeeDataThread(QThread):
         contGraphsX.append(self.contPacketCount)
         containerAltY.append(float(line[7]))
         containerBattY = line[9]
-        utcTimeY = line[10]
+        utcTimeY = line[1]
+        contTemp = line[8]
         try:
             if(float(line[12]) >= -95 and float(line[12]) <= -70 and float(line[11]) >= 25 and float(line[11]) <= 40) :
                 latitude.append(float(line[11]))
@@ -229,7 +300,9 @@ class Display(QWidget):
         self.createTitle()
         self.createSerialBox()
         self.createSP1RotationGraph()
+        self.createSP2RotationGraph()
         self.createSP1AltGraph()
+        self.createSP2AltGraph()
         self.createSimButton()
         self.changeGraphics()
 
@@ -244,19 +317,24 @@ class Display(QWidget):
         grid = QGridLayout()
         grid.setSpacing(25)
         grid.setContentsMargins(40, 40, 40, 40)
-        grid.addWidget(self.title, 0, 0, 1, 4, Qt.AlignCenter)
-        grid.addWidget(self.altitudeGraph, 1, 0)  
-        grid.addWidget(self.SP1rotationGraph, 1, 1)
-        grid.addWidget(self.legendWid, 1, 2, Qt.AlignCenter)
-        grid.addWidget(self.gpsGraph, 2, 0)
-        grid.addWidget(self.SP1AltitudeGraph, 2, 1)
-        grid.addWidget(self.commandWid, 2, 2)
-        grid.addWidget(self.utcBox, 3, 0, Qt.AlignCenter)
-        grid.addWidget(self.battBox, 3, 1, Qt.AlignCenter)
-        grid.addWidget(self.mqttSimWid, 3, 2, Qt.AlignCenter)
-        grid.addWidget(self.serialBox, 5, 0, 1, 2, Qt.AlignCenter)
-        grid.addWidget(self.serialBox2, 5, 2, 1, 1, Qt.AlignCenter)
-        grid.addWidget(self.serialBox3, 6, 0, 1, 4, Qt.AlignCenter)
+        grid.addWidget(self.title, 0, 0, 1, 6, Qt.AlignCenter)
+        grid.addWidget(self.altitudeGraph, 1, 0, 1, 2)  
+        grid.addWidget(self.SP1rotationGraph, 2, 0, 1, 2)
+        grid.addWidget(self.SP2rotationGraph, 2, 2, 1, 2)
+        #grid.addWidget(self.legendWid, 1, 2, Qt.AlignCenter)
+        grid.addWidget(self.SP2AltitudeGraph, 1, 4, 1, 2)
+        grid.addWidget(self.SP1AltitudeGraph, 1, 2, 1, 2)
+        grid.addWidget(self.commandWid, 2, 4)
+        grid.addWidget(self.utcBox, 5, 3, Qt.AlignCenter)
+        grid.addWidget(self.battBox, 3, 3, Qt.AlignCenter)
+        grid.addWidget(self.sp1TempBox, 3, 1, Qt.AlignCenter)
+        grid.addWidget(self.sp2TempBox, 3, 2, Qt.AlignCenter)
+        grid.addWidget(self.contTempBox, 3, 0, Qt.AlignCenter)
+        grid.addWidget(self.mqttSimWid, 3, 4, Qt.AlignCenter)
+        grid.addWidget(self.serialBox, 5, 0, 1, 3, Qt.AlignCenter)
+        grid.addWidget(self.serialBox2, 5, 4, 1, 1, Qt.AlignCenter)
+        grid.addWidget(self.serialBox3, 6, 4, 1, 1, Qt.AlignCenter)
+        grid.addWidget(self.serialBox4, 6, 0, 1, 3, Qt.AlignCenter)
         #grid.addWidget(self.simButt, 3, 3, 1, 1, Qt.AlignCenter)
         self.setLayout(grid)
 
@@ -266,11 +344,11 @@ class Display(QWidget):
         self.altitudeGraph.clear()
         self.altitudeGraph.setRange(yRange=[0, 200])
         self.altitudeGraph.setTitle('Container Altitude', **{'color': '#000', 'size': '14pt'})
-        self.altitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
+        self.altitudeGraph.setLabels(left='Altitude (m)', bottom='Packet Count')
         pen = pg.mkPen(color=containerColor)
         self.altitudeGraph.setBackground(graphBackground)
-        self.altitudeGraph.getAxis('bottom').setPen('w')
-        self.altitudeGraph.getAxis('left').setPen('w')
+        self.altitudeGraph.getAxis('bottom').setPen('k')
+        self.altitudeGraph.getAxis('left').setPen('k')
         self.contAltitudePlot = self.altitudeGraph.plot(contGraphsX, containerAltY, pen=pen, name='Container')
         app.processEvents()
     
@@ -279,12 +357,25 @@ class Display(QWidget):
         self.SP1AltitudeGraph.clear()
         self.SP1AltitudeGraph.setRange(yRange=[0, 200])
         self.SP1AltitudeGraph.setTitle('SP1 Altitude', **{'color': '#000', 'size': '14pt'})
-        self.SP1AltitudeGraph.setLabels(left='Altitude (m)', bottom='Time (s)')
-        pen = pg.mkPen(color=sp2Color)
+        self.SP1AltitudeGraph.setLabels(left='Altitude (m)', bottom='Packet Count')
+        pen = pg.mkPen(color=sp1Color)
         self.SP1AltitudeGraph.setBackground(graphBackground)
-        self.SP1AltitudeGraph.getAxis('bottom').setPen('w')
-        self.SP1AltitudeGraph.getAxis('left').setPen('w')
+        self.SP1AltitudeGraph.getAxis('bottom').setPen('k')
+        self.SP1AltitudeGraph.getAxis('left').setPen('k')
         self.SP1AltitudePlot = self.SP1AltitudeGraph.plot(SP1GraphsX, SP1AltY, pen=pen, name='SP1')
+        app.processEvents()
+
+    def createSP2AltGraph(self):
+        self.SP2AltitudeGraph = pg.PlotWidget()
+        self.SP2AltitudeGraph.clear()
+        self.SP2AltitudeGraph.setRange(yRange=[0, 200])
+        self.SP2AltitudeGraph.setTitle('SP2 Altitude', **{'color': '#000', 'size': '14pt'})
+        self.SP2AltitudeGraph.setLabels(left='Altitude (m)', bottom='Packet Count')
+        pen = pg.mkPen(color=sp2Color)
+        self.SP2AltitudeGraph.setBackground(graphBackground)
+        self.SP2AltitudeGraph.getAxis('bottom').setPen('k')
+        self.SP2AltitudeGraph.getAxis('left').setPen('k')
+        self.SP2AltitudePlot = self.SP2AltitudeGraph.plot(SP2GraphsX, SP2AltY, pen=pen, name='SP2')
         app.processEvents()
 
     def createGPSGraph(self):
@@ -301,38 +392,32 @@ class Display(QWidget):
 
     #creates the other (currently) non-real time graphs
     def createSP1RotationGraph(self):
-        self.SP1rotationGraph = pg.PlotWidget()
-        self.SP1rotationGraph.setRange(yRange=[1790, 1810])
-        self.SP1rotationGraph.setTitle('Rotation Rate', **{'color': '#000', 'size': '14pt'})
-        self.SP1rotationGraph.setLabels(left='Rotation Rate (°/s)', bottom='Time (s)')
-        self.x = list(range(25))  # 100 time points
-        self.y = [randint(1800,1804) for _ in range(25)]  # 100 data points
-        self.SP1rotationGraph.setBackground(graphBackground)
-        pen = pg.mkPen(color=sp1Color)
-        self.SP1rotationGraph.plot(self.x, self.y, pen=pen)
-        self.x = list(range(25))  # 100 time points
-        self.y = [randint(1800,1804) for _ in range(25)]   # 100 data points
-        pen = pg.mkPen(color=sp2Color)
-        self.SP1rotationGraph.getAxis('bottom').setPen('w')
-        self.SP1rotationGraph.getAxis('left').setPen('w')
-        self.SP1rotationGraph.plot(self.x, self.y, pen=pen)
 
-    def createSP1AirTempGraph(self):
-        self.airTempGraph = pg.PlotWidget()
-        self.airTempGraph.setRange(yRange=[26.3, 26.9])
-        self.airTempGraph.setTitle('Air Temperature', **{'color': '#000', 'size': '14pt'})
-        self.airTempGraph.setLabels(left='Temperature (°C)', bottom='Time (s)')
-        self.x = list(range(25))  # 100 time points
-        self.y = [uniform(26.6,26.7) for _ in range(25)]  # 100 data points
-        self.airTempGraph.setBackground(graphBackground)
+        self.SP1rotationGraph = pg.PlotWidget()
+        self.SP1rotationGraph.clear()
+        self.SP1rotationGraph.setRange(yRange=[0, 1500])
+        self.SP1rotationGraph.setTitle('SP1 Rotation', **{'color': '#000', 'size': '14pt'})
+        self.SP1rotationGraph.setLabels(left='Rotation (rot/min)', bottom='Packet Count')
         pen = pg.mkPen(color=sp1Color)
-        self.airTempGraph.plot(self.x, self.y, pen=pen)
-        self.x = list(range(25))  # 100 time points
-        self.y = [uniform(26.6,26.7) for _ in range(25)]  # 100 data points
+        self.SP1rotationGraph.setBackground(graphBackground)
+        self.SP1rotationGraph.getAxis('bottom').setPen('k')
+        self.SP1rotationGraph.getAxis('left').setPen('k')
+        self.SP1rotationPlot = self.SP1rotationGraph.plot(SP1GraphsX, SP1RotY, pen=pen, name='SP2')
+        app.processEvents()
+    
+    def createSP2RotationGraph(self):
+
+        self.SP2rotationGraph = pg.PlotWidget()
+        self.SP2rotationGraph.clear()
+        self.SP2rotationGraph.setRange(yRange=[0, 1500])
+        self.SP2rotationGraph.setTitle('SP2 Rotation', **{'color': '#000', 'size': '14pt'})
+        self.SP2rotationGraph.setLabels(left='Rotation (rot/min)', bottom='Packet Count')
         pen = pg.mkPen(color=sp2Color)
-        self.airTempGraph.getAxis('bottom').setPen('w')
-        self.airTempGraph.getAxis('left').setPen('w')
-        self.airTempGraph.plot(self.x, self.y, pen=pen)
+        self.SP2rotationGraph.setBackground(graphBackground)
+        self.SP2rotationGraph.getAxis('bottom').setPen('k')
+        self.SP2rotationGraph.getAxis('left').setPen('k')
+        self.SP2rotationPlot = self.SP2rotationGraph.plot(SP2GraphsX, SP2RotY, pen=pen, name='SP2')
+        app.processEvents()
 
     #creates the mqtt and command buttons
     def createRightButtons(self):
@@ -348,10 +433,10 @@ class Display(QWidget):
         commandBoxes = QWidget()
         commandBoxesLayout = QHBoxLayout()
         commandBox = QComboBox(self)
-        commandBox.setFixedSize(120, 50)
+        commandBox.setFixedSize(150, 50)
         commandBox.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
         #commandBox.addItems(["CX_ON", "CX_PING", "SP1_ON", "SP2_ON", "SIM_ENABLE", "SIM_ACTIVATE", "MANUAL_RELEASE"])
-        commandBox.addItems(["SET_TIME","CX_ON", "CX_OFF", "CX_PING", "SP1_ON", "SP1_OFF", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE", "STOP_BUZZER"])
+        commandBox.addItems(["SET_TIME","CX_ON", "CX_OFF", "CX_PING", "SP1_ON", "SP1_OFF", "SP2_ON", "SP2_OFF", "MANUAL_RELEASE", "CLEAR_FLASH", "SIM_ENABLE", "SIM_ACTIVATE", "SIM_DISABLE", "STOP_BUZZER", "START_BUZZER"])
         commandBox.setEditable(True)
         line_edit = commandBox.lineEdit()
         line_edit.setAlignment(Qt.AlignCenter)
@@ -405,7 +490,7 @@ class Display(QWidget):
     def createBottomBoxes(self):
         self.utcBox = QWidget()
         utcLayout = QVBoxLayout()
-        utcLabel = QLabel("UTC")
+        utcLabel = QLabel("UTC Time")
         utcLabel.setFont(QFont('Airal', 10))
         utcLabel.setAlignment(Qt.AlignCenter)
         utcLabel.setStyleSheet("color: white")
@@ -431,10 +516,52 @@ class Display(QWidget):
         battLayout.addWidget(battText)
         self.battBox.setLayout(battLayout)
 
+        self.contTempBox = QWidget()
+        contTempLayout = QVBoxLayout()
+        contTempLabel = QLabel("Container Temp (C)")
+        contTempLabel.setFont(QFont('Arial', 10))
+        contTempLabel.setAlignment(Qt.AlignCenter)
+        contTempLabel.setStyleSheet("color: white")
+        contTempLayout.addWidget(contTempLabel)
+        contTempText = QLineEdit()
+        contTempText.setText("5.0") 
+        contTempText.setAlignment(Qt.AlignCenter)
+        contTempText.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
+        contTempLayout.addWidget(contTempText)
+        self.contTempBox.setLayout(contTempLayout)
+
+        self.sp1TempBox = QWidget()
+        sp1TempLayout = QVBoxLayout()
+        sp1TempLabel = QLabel("SP1 Temp (C)")
+        sp1TempLabel.setFont(QFont('Arial', 10))
+        sp1TempLabel.setAlignment(Qt.AlignCenter)
+        sp1TempLabel.setStyleSheet("color: white")
+        sp1TempLayout.addWidget(sp1TempLabel)
+        contTempText = QLineEdit()
+        contTempText.setText("5.0") 
+        contTempText.setAlignment(Qt.AlignCenter)
+        contTempText.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
+        sp1TempLayout.addWidget(contTempText)
+        self.sp1TempBox.setLayout(sp1TempLayout)
+
+        self.sp2TempBox = QWidget()
+        sp2TempLayout = QVBoxLayout()
+        sp2TempLabel = QLabel("SP2 Temp (C)")
+        sp2TempLabel.setFont(QFont('Arial', 10))
+        sp2TempLabel.setAlignment(Qt.AlignCenter)
+        sp2TempLabel.setStyleSheet("color: white")
+        sp2TempLayout.addWidget(sp2TempLabel)
+        contTempText = QLineEdit()
+        contTempText.setText("5.0") 
+        contTempText.setAlignment(Qt.AlignCenter)
+        contTempText.setStyleSheet('background-color:black; color:white; border:3px solid; border-color:grey')
+        sp2TempLayout.addWidget(contTempText)
+        self.sp2TempBox.setLayout(sp2TempLayout)
+
     def createSerialBox(self):
         self.serialBox = QWidget()
         serialBoxLayout = QVBoxLayout()
-        serialBoxLabel = QLabel("Serial Input:")
+        serialBoxLabel = QLabel("Container Input:")
         serialBoxLabel.setFont(QFont('Arial', 10))
         serialBoxLabel.setAlignment(Qt.AlignCenter)
         serialBoxLabel.setStyleSheet("color: white")
@@ -449,7 +576,7 @@ class Display(QWidget):
 
         self.serialBox2 = QWidget()
         serialBox2Layout = QVBoxLayout()
-        serialBox2Label = QLabel("Serial Input:")
+        serialBox2Label = QLabel("Payload 1 Input:")
         serialBox2Label.setFont(QFont('Arial', 10))
         serialBox2Label.setAlignment(Qt.AlignCenter)
         serialBox2Label.setStyleSheet("color: white")
@@ -464,7 +591,7 @@ class Display(QWidget):
 
         self.serialBox3 = QWidget()
         serialBox3Layout = QVBoxLayout()
-        serialBox3Label = QLabel("Serial Input:")
+        serialBox3Label = QLabel("Payload 2 Input:")
         serialBox3Label.setFont(QFont('Arial', 10))
         serialBox3Label.setAlignment(Qt.AlignCenter)
         serialBox3Label.setStyleSheet("color: white")
@@ -472,10 +599,25 @@ class Display(QWidget):
         serialBox3Text = QTextEdit()
         serialBox3Text.setAlignment(Qt.AlignCenter)
         serialBox3Text.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
-        serialBox3Text.setFixedSize(900,60)
+        serialBox3Text.setFixedSize(400,60)
         serialBox3Layout.addWidget(serialBox3Text)
         #serialBox3Layout.addStretch()
         self.serialBox3.setLayout(serialBox3Layout)
+
+        self.serialBox4 = QWidget()
+        serialBox4Layout = QVBoxLayout()
+        serialBox4Label = QLabel("Extra Input:")
+        serialBox4Label.setFont(QFont('Arial', 10))
+        serialBox4Label.setAlignment(Qt.AlignCenter)
+        serialBox4Label.setStyleSheet("color: white")
+        serialBox4Layout.addWidget(serialBox4Label)
+        serialBox4Text = QTextEdit()
+        serialBox4Text.setAlignment(Qt.AlignCenter)
+        serialBox4Text.setStyleSheet('background-color:white; color:black; border:3px solid; border-color:grey')
+        serialBox4Text.setFixedSize(900,60)
+        serialBox4Layout.addWidget(serialBox4Text)
+        #serialBox4Layout.addStretch()
+        self.serialBox4.setLayout(serialBox4Layout)
 
     def createSimButton(self):
         self.mqttSimWid = QWidget()
@@ -549,13 +691,20 @@ class Display(QWidget):
     def updateAllGraphs(self):
         self.contAltitudePlot.setData(contGraphsX, containerAltY)
         self.SP1AltitudePlot.setData(SP1GraphsX, SP1AltY)
+        self.SP2AltitudePlot.setData(SP2GraphsX, SP2AltY)
+        self.SP1rotationPlot.setData(SP1GraphsX, SP1RotY)
+        self.SP2rotationPlot.setData(SP2GraphsX, SP2RotY)
         self.battBox.children()[0].itemAt(1).widget().setText(containerBattY) #path to the battery voltage box
         self.gpsGraphPlot.setData(latitude, longitude)
         #print(self.utcBox.children()[0].itemAt(1).widget())
         self.utcBox.children()[0].itemAt(1).widget().setText(utcTimeY)
+        self.contTempBox.children()[0].itemAt(1).widget().setText(contTemp)
+        self.sp1TempBox.children()[0].itemAt(1).widget().setText(sp1Temp)
+        self.sp2TempBox.children()[0].itemAt(1).widget().setText(sp2Temp)
         self.serialBox.children()[0].itemAt(1).widget().setText(serialLine)
         self.serialBox2.children()[0].itemAt(1).widget().setText(serialLine2)
         self.serialBox3.children()[0].itemAt(1).widget().setText(serialLine3)
+        self.serialBox4.children()[0].itemAt(1).widget().setText(serialLine4)
 
 
     def sendCommand(self):
@@ -607,9 +756,21 @@ class Display(QWidget):
             print('About to send sp1_off')
             dat = "<CMD,2617,SP1X,OFF>"
             self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SP2_ON"):
+            print('About to send SP2_on')
+            dat = "<CMD,2617,SP2X,ON>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "SP2_OFF"):
+            print('About to send sp2_off')
+            dat = "<CMD,2617,SP2X,OFF>"
+            self.dataCollectionThread.xbee.write(dat.encode())
         elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "STOP_BUZZER"):
             print('About to send stop buzzer')
             dat = "<CMD,2617,CX,STOP_BUZZER>"
+            self.dataCollectionThread.xbee.write(dat.encode())
+        elif(self.commandWid.children()[0].itemAt(1).widget().children()[1].currentText() == "START_BUZZER"):
+            print('About to send start buzzer')
+            dat = "<CMD,2617,CX,START_BUZZER>"
             self.dataCollectionThread.xbee.write(dat.encode())
 
 #thread to update the graphs

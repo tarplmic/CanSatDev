@@ -1,0 +1,12 @@
+begin test
+past serial begin
+ABOUT TO READ INITIAL VARS FROM FLASH
+alt Correction
+-13
+flight stage
+rising
+past sensor init
+Time, Alt, Temp, Voltage, gpsTime, Lat, Long, gpsAlt, gpsSats, flightStage, lastCommand, altCorrection
+261,0,0.64,28.11,0.25,00:00:00,0.00,0.00,0.00,0,rising,test,-13,0.00
+380,1,1.27,28.12,0.50,00:00:00,0.00,0.00,0.00,0,rising,test,-13,0.00
+499,2,1.89,28.12,0

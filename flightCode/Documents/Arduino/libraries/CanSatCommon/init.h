@@ -93,6 +93,11 @@ bool recFirstSimp = false;
 float calculatedAlt;
 int altMakesSense = 0;
 
+// bool recFirstSP1Packet = false;
+// bool recFirstSP2Packet = false;
+// String sp1DataStart = "";
+// String sp2DataStart = "";
+
 float bmpAltSamples[10];
 float voltageSamples[10];
 // float rawRotRateX[10];

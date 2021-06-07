@@ -52,7 +52,7 @@ void setup() {
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
 
-  Serial1.begin(9600);
+  Serial1.begin(115200);
   while(!Serial1);
   
   Serial1.println("OpenLog started");
@@ -110,17 +110,7 @@ void loop() {
 
     /*READ XBEE*/
     if((currentTs - readDelayStart) > readDelayNum){
-     /*command = readXBee();
-     if (command == "CMD,2617,SP1X,ON"){
-        sendTelem = true;
-        Serial2.println("RECIEVEED SP1X ON");
-     }else if (command == "CMD,2617,SP1X,OFF"){
-        sendTelem = false;
-        Serial2.println(sendTelem);
-        Serial2.println("RECIEVEED SP1X OFF");
-        readDelayStart = millis();
-     }
-     */
+     
      recvWithStartEndMarkers();
      showNewData();
      readDelayStart = millis();
@@ -187,7 +177,7 @@ void loop() {
         //CALCULATE DELTA ALT
         previousAlt = currentAlt;
         currentAlt = alt;
-        if(!(currentAlt > 1000 || currentAlt < 0)){
+        if(!(currentAlt > 1000 || currentAlt < -30)){
           deltaAlt[deltaAltSampleIndex] = currentAlt - previousAlt; 
           previousAlts[deltaAltSampleIndex] = currentAlt;
         
@@ -197,7 +187,7 @@ void loop() {
             deltaAltSampleIndex++;
           }
         }else{
-          Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
+          //Serial2.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
           Serial1.println("THROWING OUT ALTITUDE: OUT OF RANGE: " + String(currentAlt));
         }
         
@@ -235,23 +225,26 @@ void loop() {
 
     /*SEND PACKET*/
     if((currentTs - sendDelayStart >= sendDelayNum) && sendTelem == true){
-      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, String(bmpTemperature), rotation_z, openLogAverageDeltaAlt);
+      //Calculate rotation perp to rotor
+      totalRotation = sqrt(sq(rotation_x) + sq(rotation_y) + sq(rotation_z));
+      
+      String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, thermTempStr, totalRotation, openLogAverageDeltaAlt);
       writeXBee(XBEEWrite);  
       sendDelayStart = millis();
     }
 
 }
 
-String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, float alt, String thermTemp, float rotationZ, float avgDeltaAlt){
+String xbeePacket(const int teamID, String missionTime, int &packetCount, String packetType, float alt, String thermTemp, float rotation, float avgDeltaAlt){
   
-    unsigned long runMillis= millis();
+    /*unsigned long runMillis= millis();
     unsigned long allSeconds=millis()/1000;
     int runHours= allSeconds/3600;
     int secsRemaining=allSeconds%3600;
     int runMinutes=secsRemaining/60;
-    int runSeconds=secsRemaining%60;
+    int runSeconds=secsRemaining%60;*/
     
-    missionTime = String(runHours) + ":" + String(runMinutes) + ":" + String(runSeconds);
+    //missionTime = String(runHours) + ":" + String(runMinutes) + ":" + String(runSeconds);
     
     packetCount += 1;
     
@@ -259,7 +252,7 @@ String xbeePacket(const int teamID, String missionTime, int &packetCount, String
     altStr = altStr.substring(0, altStr.length() - 1);
     temStr = String(thermTemp);
     
-    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + altStr + "," + temStr + "," + String(rotationZ) + "," + String(avgDeltaAlt) + ">"; 
+    String message = "<" + String(teamID) + "," + "," + "," + packetType + "," + altStr + "," + temStr + "," + String(rotation) + "," + String(avgDeltaAlt) + ">"; 
 
     return message;
 }
