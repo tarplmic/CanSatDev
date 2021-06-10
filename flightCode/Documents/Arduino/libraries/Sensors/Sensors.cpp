@@ -39,14 +39,14 @@ void Sensors::init()
     Wire.begin();
     DS3231_init(DS3231_CONTROL_INTCN);
 
-    Wire.begin();
+    /*Wire.begin();
     if (myGPS.begin() == false)
     {
         //Serial.println(F("u-blox GNSS module not detected at default I2C address. Please check wiring. Freezing."));
         while (1){
             digitalWrite(_pin, LOW);
         };
-    }
+    }*/
 
     analogReadResolution(12);
     analogReference(AR_DEFAULT);
@@ -125,7 +125,7 @@ float Sensors::getAccZ(){
     return accz;
 }
 
-float Sensors::getLat(){
+/*float Sensors::getLat(){
     float latitude = myGPS.getLatitude(50);
     //latitude = latitude / 10000000;
     
@@ -175,7 +175,7 @@ String Sensors::getGPSTime(){
 
 int Sensors::getNumSats(){
     return myGPS.getSIV(50);
-}
+}*/
 
 float Sensors::getBattVoltage(){
     float analogReading = analogRead(BATTERYSENSORPIN);

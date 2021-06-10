@@ -28,11 +28,11 @@ class Sensors
     float getAccX();
     float getAccY();
     float getAccZ();
-    float getLat();
-    float getLong();
-    float getGPSAlt();
-    String getGPSTime();
-    int getNumSats();
+    //float getLat();
+    //float getLong();
+    //float getGPSAlt();
+    //String getGPSTime();
+    //int getNumSats();
     float getBattVoltage();
     float getTemp();
     void releaseServo1();

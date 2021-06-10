@@ -28,8 +28,8 @@ float alt;
 float tem = 0;
 float voltage = 0; 
 String gpsTime = "00:00:00";
-float gpsLat = 0000000000.00;
-float gpsLong = 0000000000.00;
+float gpsLat = 0;
+float gpsLong = 0;
 float gpsAlt = 0;
 int gpsSats = 0; 
 String flightStage = "rising"; //operating state of the software, softwareState
