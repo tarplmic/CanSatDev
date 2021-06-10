@@ -9,7 +9,6 @@ void setup() {
   // put your setup code here, to run once:
   pinMode(ledPin, OUTPUT);
   digitalWrite(ledPin, HIGH);
-  pinMode(buzzerPin, OUTPUT);
 
   /*Serial1.begin(115200); //openlog
   while (!Serial1) { Serial1.println("open log aint starting"); };
@@ -29,11 +28,9 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   digitalWrite(ledPin, HIGH);
-  digitalWrite(buzzerPin, HIGH);
   delay(500);
   
   digitalWrite(ledPin, LOW);
-  digitalWrite(buzzerPin, LOW);
   delay(500);
 
   /*imu::Vector<3> rotSpeed = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);

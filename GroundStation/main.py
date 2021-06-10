@@ -91,12 +91,24 @@ mqttc.on_publish = on_publish
 mqttc.on_subscribe = on_subscribe
 # Uncomment to enable debug messages
 mqttc.on_log = on_log
-topic = 'teams/1010' # team number
+topic = 'teams/2617' # team number
 # Connect
-mqttc.username_pw_set("t1010", "t1010pass") # made up username and password
+mqttc.username_pw_set("2617", "Raedhemy472*") # made up username and password
 #mqttc.connect(url.hostname, url.port) # establish connection
 mqttc.connect("cansat.info", 1883)
 ###MQTT SETUP###
+
+# containerFields = "teamId,missionTime,packetCount,packetType,mode,sp1Released,sp2Released,altitude,temp,voltage,gpsTime,gpsLat,gpsLong,gpsAlt,gpsSats,flightStage,sp1PacketCount,sp2PacketCount,lastCommand,altCorrection,avgDeltaAlt"
+# with open('Flight_2617_C.csv','a',newline='') as fd:
+#         csvData = csv.writer(fd, delimiter=",")
+#         csvData.writerow(line)
+# spFields = 
+# with open('Flight_2617_SP1.csv','a',newline='') as fd:
+#         csvData = csv.writer(fd, delimiter=",")
+#         csvData.writerow(line)
+# with open('Flight_2617_SP2.csv','a',newline='') as fd:
+#         csvData = csv.writer(fd, delimiter=",")
+#         csvData.writerow(line)
 
 #thread to grab xbee data from the serial usb port
 class xbeeDataThread(QThread):
@@ -561,7 +573,7 @@ class Display(QWidget):
     def createSerialBox(self):
         self.serialBox = QWidget()
         serialBoxLayout = QVBoxLayout()
-        serialBoxLabel = QLabel("Container Input:")
+        serialBoxLabel = QLabel("Container Telemetry:")
         serialBoxLabel.setFont(QFont('Arial', 10))
         serialBoxLabel.setAlignment(Qt.AlignCenter)
         serialBoxLabel.setStyleSheet("color: white")
@@ -576,7 +588,7 @@ class Display(QWidget):
 
         self.serialBox2 = QWidget()
         serialBox2Layout = QVBoxLayout()
-        serialBox2Label = QLabel("Payload 1 Input:")
+        serialBox2Label = QLabel("Payload 1 Telemetry:")
         serialBox2Label.setFont(QFont('Arial', 10))
         serialBox2Label.setAlignment(Qt.AlignCenter)
         serialBox2Label.setStyleSheet("color: white")
@@ -591,7 +603,7 @@ class Display(QWidget):
 
         self.serialBox3 = QWidget()
         serialBox3Layout = QVBoxLayout()
-        serialBox3Label = QLabel("Payload 2 Input:")
+        serialBox3Label = QLabel("Payload 2 Telemetry:")
         serialBox3Label.setFont(QFont('Arial', 10))
         serialBox3Label.setAlignment(Qt.AlignCenter)
         serialBox3Label.setStyleSheet("color: white")
@@ -606,7 +618,7 @@ class Display(QWidget):
 
         self.serialBox4 = QWidget()
         serialBox4Layout = QVBoxLayout()
-        serialBox4Label = QLabel("Extra Input:")
+        serialBox4Label = QLabel("Extra Telemetry:")
         serialBox4Label.setFont(QFont('Arial', 10))
         serialBox4Label.setAlignment(Qt.AlignCenter)
         serialBox4Label.setStyleSheet("color: white")
@@ -649,13 +661,21 @@ class Display(QWidget):
             self.simButt.setStyleSheet('background-color:grey; color:white; border:3px solid; border-color:grey') 
             self.simButt.setText("Am sending SIMP")
 
-            with open('simData.txt','r') as fd:
-                for line in fd:
-                    line = line.replace('$', '2617')
-                    line = line.replace('\n', '')
-                    line = "<" + line + ">"
-                    simIndexArray.append(line)
-
+            # with open('simData.txt','r') as fd:
+            #     for line in fd:
+            #         line = line.replace('$', '2617')
+            #         line = line.replace('\n', '')
+            #         line = "<" + line + ">"
+            #         simIndexArray.append(line)
+            
+            with open('simData.csv') as csv_file:
+                csv_reader = csv.reader(csv_file, delimiter=',')
+                for row in csv_reader:
+                    if (len(row) >= 3):
+                        if(row[0] == 'CMD'):
+                            row[1] = "2617"
+                            #print("<" + row[0] + "," + row[1] + "," + row[2] + "," + row[3] + ">")
+                            simIndexArray.append("<" + row[0] + "," + row[1] + "," + row[2] + "," + row[3] + ">")
 
             self.sendSimDataThread = sendSimData(self.sendSimDataFun)
             self.sendSimDataThread.start()
@@ -689,11 +709,76 @@ class Display(QWidget):
 
     #updates all of the graphs with data coming from xbee
     def updateAllGraphs(self):
+        if(len(contGraphsX) > len(containerAltY)):
+            print("contGraphsX greater than containeralt")
+            print("contgraphsx: " + str(len(contGraphsX)))
+            print("conat alt y: " + str(len(containerAltY)))
+            contGraphsX.pop(len(contGraphsX) - 1)
+            print("contgraphsx: " + str(len(contGraphsX)))
+            print("conat alt y: " + str(len(containerAltY)))
+
+        elif(len(contGraphsX) < len(containerAltY)):
+            print("contGraphsX less than containeralt")
+            print("contgraphsx: " + str(len(contGraphsX)))
+            print("conat alt y: " + str(len(containerAltY)))
+            contGraphsX.append(contGraphsX[len(contGraphsX) - 1] + 1)
+            print("contgraphsx: " + str(len(contGraphsX)))
+            print("conat alt y: " + str(len(containerAltY)))
+
+        if(len(SP1GraphsX) > len(SP1AltY) or len(SP1GraphsX) > len(SP1RotY)):
+            print("sp1GraphsX more than SP1AltY")
+            print("SP1GraphsX: " + str(len(SP1GraphsX)))
+            print("SP1AltY: " + str(len(SP1AltY)))
+            print("SP1RotY: " + str(len(SP1RotY)))
+            SP1GraphsX.pop(len(SP1GraphsX) - 1)
+            print("SP1GraphsX: " + str(len(SP1GraphsX)))
+            print("SP1AltY: " + str(len(SP1AltY)))
+            print("SP1rot: " + str(len(SP1RotY)))
+
+            if(len(SP1AltY) > len(SP1RotY)):
+                print("SP1RotY: " + str(len(SP1RotY)))
+                print("SP1AltY: " + str(len(SP1AltY)))
+                SP1AltY.pop(len(SP1AltY) - 1)
+                print("SP1RotY: " + str(len(SP1RotY)))
+                print("SP1AltY: " + str(len(SP1AltY)))
+
+            elif(len(SP1AltY) < len(SP1RotY)):
+                print("SP1RotY: " + str(len(SP1RotY)))
+                print("SP1AltY: " + str(len(SP1AltY)))
+                SP1RotY.pop(len(SP1RotY) - 1)
+                print("SP1RotY: " + str(len(SP1RotY)))
+                print("SP1AltY: " + str(len(SP1AltY)))
+
+        if(len(SP1GraphsX) < len(SP1AltY) or len(SP1GraphsX) < len(SP1RotY)):
+            print("sp2GraphsX less than SP1AltY")
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2RotY: " + str(len(SP2RotY)))
+            SP1GraphsX.append(SP1GraphsX[len(SP1GraphsX) - 1] + 1)
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2RotY: " + str(len(SP2RotY)))
+
+            if(len(SP1AltY) > len(SP1RotY)):
+                print("SP2AltY: " + str(len(SP2AltY)))
+                print("SP2RotY: " + str(len(SP2RotY)))
+                SP1RotY.append(0)
+                print("SP2AltY: " + str(len(SP2AltY)))
+                print("SP2RotY: " + str(len(SP2RotY)))
+
+            elif(len(SP1AltY) < len(SP1RotY)):
+                print("SP2AltY: " + str(len(SP2AltY)))
+                print("SP2RotY: " + str(len(SP2RotY)))
+                SP1RotY.append(0)
+                print("SP2AltY: " + str(len(SP2AltY)))
+                print("SP2RotY: " + str(len(SP2RotY)))
+
         self.contAltitudePlot.setData(contGraphsX, containerAltY)
         self.SP1AltitudePlot.setData(SP1GraphsX, SP1AltY)
         self.SP2AltitudePlot.setData(SP2GraphsX, SP2AltY)
         self.SP1rotationPlot.setData(SP1GraphsX, SP1RotY)
         self.SP2rotationPlot.setData(SP2GraphsX, SP2RotY)
+
         self.battBox.children()[0].itemAt(1).widget().setText(containerBattY) #path to the battery voltage box
         self.gpsGraphPlot.setData(latitude, longitude)
         #print(self.utcBox.children()[0].itemAt(1).widget())

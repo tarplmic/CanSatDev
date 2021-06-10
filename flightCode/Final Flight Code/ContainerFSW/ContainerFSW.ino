@@ -24,8 +24,8 @@ const int readDelayNum = 30;
 int readDelayStart;
 const int altCheckDelayNum = 1000;
 int altCheckDelayStart;
-const int gpsDelayNum = 1000;
-int gpsDelayStart;
+/*const int gpsDelayNum = 1000;
+int gpsDelayStart;*/
 const int simGotDataCheckNum = 1300;
 int simGotDataCheckStart;
 
@@ -108,8 +108,8 @@ void setup() {
   printDelayStart = millis();
   readDelayStart = millis();
   altCheckDelayStart = millis();
-  gpsDelayStart = millis();
-  simGotDataCheckStart = millis();
+  //gpsDelayStart = millis();
+  //simGotDataCheckStart = millis();
   
 }
 
@@ -219,14 +219,14 @@ void loop() {
   }*/
 
   //INTERVAL TO GET GPS DATA
-  if((currentTs - gpsDelayStart) > gpsDelayNum){
+  /*if((currentTs - gpsDelayStart) > gpsDelayNum){
     gpsLat = sensors.getLat();
     gpsLong = sensors.getLong();
     gpsAlt = sensors.getGPSAlt();
     gpsTime = sensors.getGPSTime();
     gpsSats = sensors.getNumSats();
     gpsDelayStart = millis();
-  }
+  }*/
   
   //INTERVAL TO PRINT TO XBEE
   if((currentTs - printDelayStart) > printDelayNum){
@@ -262,7 +262,7 @@ void printToXbee(){
     altStr = altStr.substring(0, altStr.length() - 1);
     temStr = String(tem);
     temStr = temStr.substring(0, temStr.length() - 1);
-    gpsLatStr = String(gpsLat);
+    /*gpsLatStr = String(gpsLat);
     gpsLatStr = gpsLatStr.substring(0, 2);
     gpsLatStr += ".";
     gpsLatStr += String(gpsLat).substring(2, 6);
@@ -271,11 +271,11 @@ void printToXbee(){
     gpsLongStr += ".";
     gpsLongStr += String(gpsLong).substring(3, 6);
     gpsAltStr = String(gpsAlt);
-    gpsAltStr = gpsAltStr.substring(0, gpsAltStr.length() - 1);
+    gpsAltStr = gpsAltStr.substring(0, gpsAltStr.length() - 1);*/
     
     Serial2.println(String(teamId) + "," + missionTime + "," + String(packetCount) + "," + packetType + "," + mode + "," + sp1Released + "," + sp2Released + "," + altStr + "," + temStr +
-                  "," + String(voltage) + "," + gpsTime + "," + gpsLatStr + "," + gpsLongStr + "," + gpsAltStr + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
-                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt) + "," + String(accx) + "," + String(accy) + "," + String(accz));
+                  "," + String(voltage) + "," + String(gpsTime) + "," + String(gpsLat) + "," + String(gpsLong) + "," + String(gpsAlt) + "," + String(gpsSats) + "," + String(flightStage) + "," + String(sp1PacketCount) + "," +
+                  String(sp2PacketCount) + "," + lastCommand + "," + altCorrection + "," + String(openLogAverageDeltaAlt));
     packetCount += 1;
   }
 }

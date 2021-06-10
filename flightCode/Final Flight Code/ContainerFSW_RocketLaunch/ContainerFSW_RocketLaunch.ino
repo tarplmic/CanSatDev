@@ -30,7 +30,6 @@ int gpsDelayStart;
 //container sensor vars, alt correction, and othe global vars are defined in init.h
 //DEFINE PAYLOAD SENSOR VARS FOR RELAY
 
-
 //DEFINE FLASH VARIABLES 
 const int DO_WRITE_TO_FLASH = 1;
 FlashStorage(flightStageFlash, int);
