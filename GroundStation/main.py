@@ -668,7 +668,7 @@ class Display(QWidget):
             #         line = "<" + line + ">"
             #         simIndexArray.append(line)
             
-            with open('simData.csv') as csv_file:
+            with open('Cansat_2021_sim_file_B.csv') as csv_file:
                 csv_reader = csv.reader(csv_file, delimiter=',')
                 for row in csv_reader:
                     if (len(row) >= 3):
@@ -748,30 +748,78 @@ class Display(QWidget):
                 SP1RotY.pop(len(SP1RotY) - 1)
                 print("SP1RotY: " + str(len(SP1RotY)))
                 print("SP1AltY: " + str(len(SP1AltY)))
-
+        
         if(len(SP1GraphsX) < len(SP1AltY) or len(SP1GraphsX) < len(SP1RotY)):
-            print("sp2GraphsX less than SP1AltY")
-            print("SP2GraphsX: " + str(len(SP2GraphsX)))
-            print("SP2AltY: " + str(len(SP2AltY)))
-            print("SP2RotY: " + str(len(SP2RotY)))
+            print("sp1GraphsX less than SP1AltY")
+            print("SP1GraphsX: " + str(len(SP1GraphsX)))
+            print("SP1AltY: " + str(len(SP1AltY)))
+            print("SP1RotY: " + str(len(SP1RotY)))
             SP1GraphsX.append(SP1GraphsX[len(SP1GraphsX) - 1] + 1)
-            print("SP2GraphsX: " + str(len(SP2GraphsX)))
-            print("SP2AltY: " + str(len(SP2AltY)))
-            print("SP2RotY: " + str(len(SP2RotY)))
+            print("SP1GraphsX: " + str(len(SP1GraphsX)))
+            print("SP1AltY: " + str(len(SP1AltY)))
+            print("SP1RotY: " + str(len(SP1RotY)))
 
             if(len(SP1AltY) > len(SP1RotY)):
+                print("SP1AltY: " + str(len(SP1AltY)))
+                print("SP1RotY: " + str(len(SP1RotY)))
+                SP1RotY.append(0)
+                print("SP1AltY: " + str(len(SP1AltY)))
+                print("SP1RotY: " + str(len(SP1RotY)))
+
+            elif(len(SP1AltY) < len(SP1RotY)):
+                print("SP1AltY: " + str(len(SP1AltY)))
+                print("SP1RotY: " + str(len(SP1RotY)))
+                SP1RotY.append(0)
+                print("SP1AltY: " + str(len(SP1AltY)))
+                print("SP1RotY: " + str(len(SP1RotY)))
+
+        if(len(SP2GraphsX) < len(SP2AltY) or len(SP2GraphsX) < len(SP2RotY)):
+            print("sp2GraphsX less than SP2AltY")
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2RotY: " + str(len(SP2RotY)))
+            SP2GraphsX.append(SP2GraphsX[len(SP2GraphsX) - 1] + 1)
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2RotY: " + str(len(SP2RotY)))
+
+            if(len(SP2AltY) > len(SP2RotY)):
                 print("SP2AltY: " + str(len(SP2AltY)))
                 print("SP2RotY: " + str(len(SP2RotY)))
-                SP1RotY.append(0)
+                SP2RotY.append(0)
                 print("SP2AltY: " + str(len(SP2AltY)))
                 print("SP2RotY: " + str(len(SP2RotY)))
 
-            elif(len(SP1AltY) < len(SP1RotY)):
+            elif(len(SP2AltY) < len(SP2RotY)):
                 print("SP2AltY: " + str(len(SP2AltY)))
                 print("SP2RotY: " + str(len(SP2RotY)))
-                SP1RotY.append(0)
+                SP2RotY.append(0)
                 print("SP2AltY: " + str(len(SP2AltY)))
                 print("SP2RotY: " + str(len(SP2RotY)))
+
+        if(len(SP2GraphsX) > len(SP2AltY) or len(SP2GraphsX) > len(SP2RotY)):
+            print("SP2GraphsX more than SP2AltY")
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2RotY: " + str(len(SP2RotY)))
+            SP2GraphsX.pop(len(SP2GraphsX) - 1)
+            print("SP2GraphsX: " + str(len(SP2GraphsX)))
+            print("SP2AltY: " + str(len(SP2AltY)))
+            print("SP2rot: " + str(len(SP2RotY)))
+
+            if(len(SP2AltY) > len(SP2RotY)):
+                print("SP2RotY: " + str(len(SP2RotY)))
+                print("SP2AltY: " + str(len(SP2AltY)))
+                SP2AltY.pop(len(SP2AltY) - 1)
+                print("SP2RotY: " + str(len(SP2RotY)))
+                print("SP2AltY: " + str(len(SP2AltY)))
+
+            elif(len(SP2AltY) < len(SP2RotY)):
+                print("SP2RotY: " + str(len(SP2RotY)))
+                print("SP2AltY: " + str(len(SP2AltY)))
+                SP2RotY.pop(len(SP2RotY) - 1)
+                print("SP2RotY: " + str(len(SP2RotY)))
+                print("SP2AltY: " + str(len(SP2AltY)))
 
         self.contAltitudePlot.setData(contGraphsX, containerAltY)
         self.SP1AltitudePlot.setData(SP1GraphsX, SP1AltY)

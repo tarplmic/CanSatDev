@@ -199,7 +199,7 @@ void Sensors::releaseServo2(){
     myServo2.attach(9); //pin 9 arduino is pin 12 samd
     //myServo2.write(80);
     //delay(100);
-    myServo2.write(0);
+    myServo2.write(80);
     delay(1000);
     myServo2.detach();
 }

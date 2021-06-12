@@ -226,7 +226,7 @@ void loop() {
     /*SEND PACKET*/
     if((currentTs - sendDelayStart >= sendDelayNum) && sendTelem == true){
       //Calculate rotation perp to rotor
-      totalRotation = sqrt(sq(rotation_x) + sq(rotation_y) + sq(rotation_z));
+      totalRotation = sqrt(sq(rotation_x) + sq(rotation_y) + sq(rotation_z)) / 6;
       
       String XBEEWrite = xbeePacket(teamID, missionTime, packetCount, packetType, alt, thermTempStr, totalRotation, openLogAverageDeltaAlt);
       writeXBee(XBEEWrite);  

@@ -28,6 +28,8 @@ const int packetCountWriteNum = 3000;
 int packetCountWriteStart;
 const int simGotDataCheckNum = 1300;
 int simGotDataCheckStart;
+//const int payloadTimeCheck = 1000;
+//int payloadTimeCheckStart;
 
 
 //container sensor vars, alt correction, and othe global vars are defined in init.h
@@ -72,6 +74,8 @@ void setup() {
       flightStage = "rising";
     }else if(flightStageFromFlash == 1){
       flightStage = "falling";
+    }else if(flightStageFromFlash == 2){
+      flightStage = "onPad";
     }
 
     flightModeFromFlash = flightModeFlash.read();
@@ -213,6 +217,20 @@ void loop() {
      packetCountWriteStart = millis();
    }
 
+   /*if((currentTs - payloadTimeCheckStart) > payloadTimeCheck){
+     if(sp1Released == "R"){
+      //check if its been 5 minutes since the initial sp1 time start
+      Serial2.println(sp1DataStart);
+     
+     }
+     if(sp2Released == "R"){
+      //check if its been 5 minutes since the initial sp2 time start
+      Serial2.println(sp2DataStart);
+     }
+
+     payloadTimeCheckStart = millis();
+   }*/
+
    //MAY NEED A SEPERATE FUNCTINO TO CALL TO CHECK ALTITUDE IN SIM MODE IF WANT TO DO AN ALITUDE CHECK ONLY EVERY SECOND
 }
 
@@ -241,11 +259,15 @@ void altitudeCheck(){
   float firstDeltaAltMin;
   float secondDeltaAltMin;
   int fs1ReqNum;
+  int fs0ReqNum;
+
+  float risingDeltaAltMin;
   
   if(mode == "F"){
     firstDeltaAltMin = -1.0;
     secondDeltaAltMin = -0.75;
     fs1ReqNum = 4;
+    fs0ReqNum = 4;
   
     for(int i = 0; i < 10; i++){
       total += deltaAlt[i];
@@ -256,6 +278,9 @@ void altitudeCheck(){
     firstDeltaAltMin = -5.0;
     secondDeltaAltMin = -3.0;
     fs1ReqNum = 4;
+    risingDeltaAltMin = 5.0;
+
+    fs0ReqNum = 2;
     
     /*for(int i = 0; i < 3; i++){
       total += simDeltaAlt[i];
@@ -265,10 +290,35 @@ void altitudeCheck(){
     averageDeltaAlt = mostRecentSimDeltaAlt;
     
   }
-  
   //Serial.println("avg delta alt: " + String(averageDeltaAlt));
   openLogAverageDeltaAlt = averageDeltaAlt;
 
+  //CHECK IF RISING
+  if(averageDeltaAlt > risingDeltaAltMin && flightStage == "onPad" && packetCount > 3){ //need to hit -1.0 atleast one time to start the check if we are falling
+    FS0reqCounter++;
+    Serial2.println("FS0reqCounterincremented");
+    
+  }else{
+    if(FS0reqCounter != 0){
+      FS0reqCounter = 0;
+      Serial2.println("FS0reqCounterresetto0");
+    }
+  }
+  if(FS0reqCounter >= fs0ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
+    Serial2.println("transitiontoflightstage1");
+    Serial2.println(averageDeltaAlt);
+    Serial1.println("transitiontoflightstage1");
+    Serial1.println(averageDeltaAlt);
+    
+    flightStage = "rising";
+
+    if(DO_WRITE_TO_FLASH){
+      Serial2.println("WARNING:ABOUTTOWRITETOFLASH:FLIGHTSTAGE");
+      flightStageFlash.write(0);
+    }
+  }
+
+  //CHECK IF FALLING
   if(averageDeltaAlt < firstDeltaAltMin && flightStage != "falling" && FS1reqCounter == 0){ //need to hit -1.0 atleast one time to start the check if we are falling
     FS1reqCounter++;
     Serial2.println("FS1reqCounterincremented");
@@ -285,9 +335,9 @@ void altitudeCheck(){
   }
 
   if(FS1reqCounter >= fs1ReqNum){ //if we meet requirments 6 times in a row (for three seconds since altitudeCheck is called every 500ms)
-    Serial2.println("transitiontoflightstage1");
+    Serial2.println("transitiontoflightstage2");
     Serial2.println(averageDeltaAlt);
-    Serial1.println("transitiontoflightstage1");
+    Serial1.println("transitiontoflightstage2");
     Serial1.println(averageDeltaAlt);
     
     flightStage = "falling";
@@ -340,8 +390,36 @@ void altitudeCheck(){
     }
       
    }
+
+   /*if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 1){
+      Serial2.println("DEPLOY PAYLOAD 1");
+      Serial1.println("DEPLOY PAYLOAD 1");
+      sensors.releaseServo1();
+      sp1Released = "R";
+     
+      Serial3.println("<CMD,2617,SP1X,ON>");
+      Serial2.println("sendingsp1xoncmd");
+    }
+    if(sp1Released == "R" && recFirstSP1Packet == false){
+      Serial3.println("<CMD,2617,SP1X,ON>");
+      Serial2.println("sendingsp1xoncmd");
+    }
    
-   if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 1){
+    if(shouldDeploy2 && sp2Released == "N" && deploySP2reqCounter > 1){
+      Serial2.println("DEPLOY PAYLOAD 2");
+      Serial1.println("DEPLOY PAYLOAD 2");
+      sensors.releaseServo2();
+      sp2Released = "R";
+
+      Serial.println("<CMD,2617,SP2X,ON>");
+      Serial2.println("sendingsp2xoncmd");
+    }
+    if(sp2Released == "R" && recFirstSP2Packet == false){
+      Serial.println("<CMD,2617,SP2X,ON>");
+      Serial2.println("sendingsp2xoncmd");
+    }*/
+
+    if(shouldDeploy1 && sp1Released == "N" && deploySP1reqCounter > 1){
       Serial2.println("DEPLOYPAYLOAD1");
       Serial1.println("DEPLOY PAYLOAD 1");
       sensors.releaseServo1();
@@ -469,12 +547,13 @@ void showNewData() {
         }else if(stringVersionReceivedChars == "CMD,2617,CX,CLEARFLASH"){
           //Serial.println("received command to clear flash");
             altCorrection = 0;
-            flightStage = "rising";
+            flightStage = "onPad";
             doSendData = 0;
             packetCount = 0;
             mode = "F";
 
             FS1reqCounter = 0;
+            FS0reqCounter = 0;
             deploySP1reqCounter = 0;
             deploySP2reqCounter = 0;
             landedReqCounter = 0;
@@ -488,7 +567,7 @@ void showNewData() {
               lastCommand = "CLEARFLASH";
               Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
-              flightStageFlash.write(0);
+              flightStageFlash.write(2);
               altCorrectionFlash.write(0);
               sendTelemFlash.write(0);
               packetCountFlash.write(0);
@@ -560,7 +639,7 @@ void showNewData() {
             altDivisor = 1;
             deltaAltSampleIndex = 0;
             currentAlt = 0;
-            flightStage = "rising";
+            flightStage = "onPad";
             altCorrection = 0;
             FS1reqCounter = 0;
             deploySP1reqCounter = 0;
@@ -570,7 +649,7 @@ void showNewData() {
             if(DO_WRITE_TO_FLASH){
               Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
-              flightStageFlash.write(0);
+              flightStageFlash.write(2);
               altCorrectionFlash.write(0);
               flightModeFlash.write(1);
             }
@@ -589,17 +668,20 @@ void showNewData() {
           recFirstSimp = false;
           deltaAltSampleIndex = 0;
           simEnableRec = 0;
-          flightStage = "rising";
+          flightStage = "onPad";
           altCorrection = 0;
           FS1reqCounter = 0;
           deploySP1reqCounter = 0;
           deploySP2reqCounter = 0;
           landedReqCounter = 0;
 
+          recFirstSP1Packet = false;
+          recFirstSP2Packet = false;
+
           if(DO_WRITE_TO_FLASH){
               Serial2.println("WARNING:ABOUTTORESETFLASHVALUES");
               // clear values
-              flightStageFlash.write(0);
+              flightStageFlash.write(2);
               altCorrectionFlash.write(0);
               flightModeFlash.write(0);
             }
@@ -608,6 +690,7 @@ void showNewData() {
           
         }else if(stringVersionReceivedChars.substring(0, 13) == "CMD,2617,SIMP"){
           if(mode == "S"){
+            lastCommand = "SIMP";
             simGotDataCheckStart = millis(); //reset got data check (if we actually received each simp data packet from ground once a second, this gotDataCheck wouldn't execute)
 
             //before, could get away with not checking if data is errenous before adding as an alitude to be averaged, but because in sim mode we only get alt data every second, one erroneous could screw up our average alot
@@ -750,6 +833,7 @@ void showNewData2() {
           Serial2.println(sendToGnd);
           packetCount += 1;
           sp1PacketCount += 1;
+          recFirstSP1Packet = true;
         }
         
         newData2 = false;
@@ -808,81 +892,9 @@ void showNewData3() {
           Serial2.println(sendToGnd);
           packetCount += 1;
           sp2PacketCount += 1;
+          recFirstSP2Packet = true;
         }
         
         newData3 = false;
     }
 }
-
-/*
-void writePayloadXBee(String packet){
-
-  int packetLength = packet.length();
-
-  //calculate chexum, get packet in bytes
-  long chexum = 0x10 + 0x01 + 0x13 + 0xa2 + 0x41 + 0xba + 0x07 + 0x85 + 0xff + 0xfe;
-  byte buffer[packet.length() + 1];
-  packet.getBytes(buffer, packet.length() + 1);
-
-  // strings have extra 0 at end
-  for (int i=0; i < packet.length(); i++){
-      chexum += buffer[i];
-  }
-  
-  Serial3.write(0x7e); //Start delimiter
-  Serial3.write((byte)0x0); //Length
-  Serial3.write(packetLength + 14); //Length
-  Serial3.write(0x10); //Frame type
-  Serial3.write(0x01); //Frame ID
-  //64-bit address
-  Serial3.write((byte)0x0);
-  Serial3.write(0x13);
-  Serial3.write(0xa2);
-  Serial3.write((byte)0x0);
-  Serial3.write(0x41);
-  Serial3.write(0xba);
-  Serial3.write(0x07);
-  Serial3.write(0x85);
-  //16-bit address - reserved 
-  Serial3.write(0xff);
-  Serial3.write(0xfe);
-  Serial3.write((byte)0x0);//broadcast radius
-  Serial3.write((byte)0x0); //transmit options
-  //Data & Checksum
-   for (int i=0; i < packet.length(); i++){
-    Serial3.write(buffer[i]);
-   }
-  //Checksum
-  Serial3.write(0xff - (chexum & 0xff));
-}
-
-void readPayloadXBee(){
-  String incomingData = "";
-  
-  if (Serial3.available() >= 16){
-    //Serial.println("serial 3 avail");
-    //while(Serial3.available() > 0){
-      //Serial.println(String(Serial3.read()));
-    //}
-    
-    if(Serial3.read() == 0x7E){
-      for (int i = 1; i<15; i++){
-        byte discardByte = Serial3.read();
-      }
-      while(Serial3.available() > 0){
-        char dataIn = Serial3.read();
-        //if (dataIn == 0x7E){
-          //break;
-        //}
-        //else {
-          incomingData += dataIn; 
-        //}
-      }
-      incomingData.remove(incomingData.length()-1);
-    }
-  } 
-  if (incomingData != ""){
-    Serial.println(incomingData);
-  }
-}
-*/
